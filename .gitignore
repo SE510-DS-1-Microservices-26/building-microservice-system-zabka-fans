@@ -169,3 +169,4 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/dotnetcore,rider,macos,windows,visualstudiocode
 /.idea
+/InternshipTracker/.idea
