@@ -6,11 +6,10 @@ namespace InternshipTracker.Domain.Entities;
 
 public class User : IEntity
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; init; } 
     public string Name { get; private set; }
     public CandidateLevel Level { get; private set; }
 
-    // Encapsulated collection to prevent external manipulation
     private readonly List<InternshipApplication> _applications = new();
     public IReadOnlyCollection<InternshipApplication> Applications => _applications.AsReadOnly();
 
@@ -22,25 +21,21 @@ public class User : IEntity
     }
 
     // Exclusive Enrollment
-    public void Enroll(InternshipApplication internshipApplication)
+    public void Enroll(InternshipApplication application)
     {
-        if (!_applications.Contains(internshipApplication))
-            throw new InvalidOperationException("Application does not belong to this user.");
+        if (!_applications.Contains(application))
+            throw new ApplicationMismatchException("This application does not belong to the current user.");
 
-        if (internshipApplication.Status != ApplicationStatus.Accepted)
-            throw new DomainException("Can only enroll in applications that have been accepted by the company.");
+        if (application.Status != ApplicationStatus.Accepted)
+            throw new InvalidApplicationStateException($"Cannot enroll. Application status is currently '{application.Status}', expected 'Accepted'.");
 
         bool isAlreadyEnrolled = _applications.Any(a => a.Status == ApplicationStatus.Enrolled);
         if (isAlreadyEnrolled)
-        {
-            throw new DomainException("Candidate is already officially enrolled in another internship.");
-        }
+            throw new AlreadyEnrolledException("Candidate is already officially enrolled in another internship.");
 
-        internshipApplication.MarkAsEnrolled();
+        application.MarkAsEnrolled();
     }
 
-    // Internal access allows the Internship entity to link applications safely 
-    // without exposing the list to the Application/Infrastructure layers.
     internal void TrackApplication(InternshipApplication application)
     {
         _applications.Add(application);

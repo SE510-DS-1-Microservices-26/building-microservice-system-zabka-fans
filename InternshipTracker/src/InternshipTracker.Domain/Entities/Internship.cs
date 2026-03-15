@@ -6,7 +6,7 @@ namespace InternshipTracker.Domain.Entities;
 
 public class Internship : IEntity
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; init; }
     public string Title { get; private set; }
     public int Capacity { get; private set; }
     public CandidateLevel MinimumLevel { get; private set; }
@@ -26,13 +26,10 @@ public class Internship : IEntity
     public InternshipApplication ReceiveApplication(User candidate)
     {
         if (candidate.Level < MinimumLevel)
-        {
-            throw new DomainException(
-                $"Candidate level '{candidate.Level}' does not meet the minimum requirement of '{MinimumLevel}'.");
-        }
+            throw new UnderqualifiedException($"Candidate level '{candidate.Level}' does not meet the minimum requirement of '{MinimumLevel}'.");
 
         var application = new InternshipApplication(Guid.NewGuid(), candidate, this);
-
+        
         _applications.Add(application);
         candidate.TrackApplication(application);
 
@@ -40,22 +37,18 @@ public class Internship : IEntity
     }
 
     // Capacity Limit
-    public void OfferPosition(InternshipApplication internshipApplication)
+    public void OfferPosition(InternshipApplication application)
     {
-        if (!_applications.Contains(internshipApplication))
-            throw new InvalidOperationException("Application does not belong to this internship.");
+        if (!_applications.Contains(application))
+            throw new ApplicationMismatchException("This application does not belong to the current internship.");
 
-        // We count both Enrolled and Accepted. If you have 5 spots and offer 5, 
-        // you shouldn't offer a 6th just because the first 5 haven't clicked "Enroll" yet.
-        int reservedSpots = _applications.Count(a =>
-            a.Status == ApplicationStatus.Enrolled ||
+        int reservedSpots = _applications.Count(a => 
+            a.Status == ApplicationStatus.Enrolled || 
             a.Status == ApplicationStatus.Accepted);
-
+        
         if (reservedSpots >= Capacity)
-        {
-            throw new DomainException("Internship capacity has been reached. Cannot accept more applicants.");
-        }
+            throw new CapacityExceededException($"Internship capacity of {Capacity} has been reached.");
 
-        internshipApplication.MarkAsAccepted();
+        application.MarkAsAccepted();
     }
 }
