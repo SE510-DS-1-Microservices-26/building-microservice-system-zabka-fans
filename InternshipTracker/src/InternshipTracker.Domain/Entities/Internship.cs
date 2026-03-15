@@ -22,22 +22,22 @@ public class Internship : IEntity
         MinimumLevel = minimumLevel;
     }
 
-    // Capacity Limit (Remains unchanged)
+    // Capacity Limit
     public void OfferPosition(InternshipApplication application)
     {
         if (!_applications.Contains(application))
             throw new ApplicationMismatchException("This application does not belong to the current internship.");
 
-        int reservedSpots = _applications.Count(a => 
-            a.Status == ApplicationStatus.Enrolled || 
+        int reservedSpots = _applications.Count(a =>
+            a.Status == ApplicationStatus.Enrolled ||
             a.Status == ApplicationStatus.Accepted);
-        
+
         if (reservedSpots >= Capacity)
             throw new CapacityExceededException($"Internship capacity of {Capacity} has been reached.");
 
         application.MarkAsAccepted();
     }
-    
+
     internal void TrackApplication(InternshipApplication application)
     {
         if (_applications.Contains(application))
