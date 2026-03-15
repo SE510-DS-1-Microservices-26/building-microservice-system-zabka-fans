@@ -22,21 +22,7 @@ public class Internship : IEntity
         MinimumLevel = minimumLevel;
     }
 
-    // Qualification Match
-    public InternshipApplication ReceiveApplication(User candidate)
-    {
-        if (candidate.Level < MinimumLevel)
-            throw new UnderqualifiedException($"Candidate level '{candidate.Level}' does not meet the minimum requirement of '{MinimumLevel}'.");
-
-        var application = new InternshipApplication(Guid.NewGuid(), candidate, this);
-        
-        _applications.Add(application);
-        candidate.TrackApplication(application);
-
-        return application;
-    }
-
-    // Capacity Limit
+    // Capacity Limit (Remains unchanged)
     public void OfferPosition(InternshipApplication application)
     {
         if (!_applications.Contains(application))
@@ -50,5 +36,15 @@ public class Internship : IEntity
             throw new CapacityExceededException($"Internship capacity of {Capacity} has been reached.");
 
         application.MarkAsAccepted();
+    }
+    
+    internal void TrackApplication(InternshipApplication application)
+    {
+        if (_applications.Contains(application))
+        {
+            throw new DuplicateApplicationException("This application is already being tracked by the internship.");
+        }
+
+        _applications.Add(application);
     }
 }
