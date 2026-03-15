@@ -1,4 +1,5 @@
 using InternshipTracker.Domain.Enums;
+using InternshipTracker.Domain.Exceptions;
 
 namespace InternshipTracker.Domain.Entities;
 
@@ -19,5 +20,14 @@ public class InternshipApplication : IEntity
 
     internal void MarkAsAccepted() => Status = ApplicationStatus.Accepted;
     internal void MarkAsEnrolled() => Status = ApplicationStatus.Enrolled;
-    internal void MarkAsRejected() => Status = ApplicationStatus.Rejected;
+    public void MarkAsRejected()
+    {
+        if (Status == ApplicationStatus.Enrolled)
+        {
+            throw new InvalidApplicationStateException(
+                "Cannot reject an application after the candidate has already officially enrolled.");
+        }
+        
+        Status = ApplicationStatus.Rejected;
+    }
 }

@@ -1,6 +1,7 @@
 using System.Net.Mime;
 using InternshipTracker.Domain.Enums;
 using InternshipTracker.Domain.Exceptions;
+using InternshipTracker.Domain.Interfaces;
 
 namespace InternshipTracker.Domain.Entities;
 
@@ -10,10 +11,7 @@ public class Internship : IEntity
     public string Title { get; private set; }
     public int Capacity { get; private set; }
     public CandidateLevel MinimumLevel { get; private set; }
-
-    private readonly List<InternshipApplication> _applications = new();
-    public IReadOnlyCollection<InternshipApplication> Applications => _applications.AsReadOnly();
-
+    
     public Internship(Guid id, string title, int capacity, CandidateLevel minimumLevel)
     {
         Id = id;
@@ -23,28 +21,19 @@ public class Internship : IEntity
     }
 
     // Capacity Limit
-    public void OfferPosition(InternshipApplication application)
+    public async Task OfferPositionAsync(
+        InternshipApplication application, 
+        IInternshipCapacityChecker capacityChecker,
+        CancellationToken cancellationToken = default)
     {
-        if (!_applications.Contains(application))
+        if (application.Internship.Id != this.Id)
             throw new ApplicationMismatchException("This application does not belong to the current internship.");
-
-        int reservedSpots = _applications.Count(a =>
-            a.Status == ApplicationStatus.Enrolled ||
-            a.Status == ApplicationStatus.Accepted);
+        
+        int reservedSpots = await capacityChecker.CountReservedSpotsAsync(this.Id, cancellationToken);
 
         if (reservedSpots >= Capacity)
             throw new CapacityExceededException($"Internship capacity of {Capacity} has been reached.");
 
         application.MarkAsAccepted();
-    }
-
-    internal void TrackApplication(InternshipApplication application)
-    {
-        if (_applications.Contains(application))
-        {
-            throw new DuplicateApplicationException("This application is already being tracked by the internship.");
-        }
-
-        _applications.Add(application);
     }
 }
