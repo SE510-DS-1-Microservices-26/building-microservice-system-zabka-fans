@@ -1,4 +1,5 @@
 using InternshipTracker.Application.DTOs;
+using InternshipTracker.Application.DTOs.Requests;
 using InternshipTracker.Application.Enums;
 using InternshipTracker.Application.Interfaces;
 using InternshipTracker.Application.Interfaces.Repositories;
