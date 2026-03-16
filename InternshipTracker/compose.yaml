@@ -1,0 +1,7 @@
+﻿services:
+  internshiptracker.ui:
+    image: internshiptracker.ui
+    build:
+      context: .
+      dockerfile: src/InternshipTracker.UI/Dockerfile
+
