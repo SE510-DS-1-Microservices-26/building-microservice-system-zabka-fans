@@ -3,7 +3,7 @@ namespace InternshipTracker.Application.Enums;
 public enum ErrorType
 {
     Failure = 500,
-    Validation = 400, 
+    Validation = 400,
     NotFound = 404,
-    Conflict = 409 
+    Conflict = 409
 }

@@ -34,7 +34,7 @@ public class UserRepository : IUserRepository
     public async Task UpdateAsync(User entity, CancellationToken cancellationToken = default)
     {
         _context.Users.Update(entity);
-        await Task.CompletedTask; 
+        await Task.CompletedTask;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)

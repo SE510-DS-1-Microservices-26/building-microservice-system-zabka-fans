@@ -10,12 +10,12 @@ namespace InternshipTracker.Infrastructure;
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         IConfiguration configuration)
     {
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
-        
+
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IInternshipRepository, InternshipRepository>();
         services.AddScoped<IInternshipApplicationRepository, InternshipApplicationRepository>();

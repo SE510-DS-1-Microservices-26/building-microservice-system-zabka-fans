@@ -13,7 +13,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
-    
+
     public new async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await base.SaveChangesAsync(cancellationToken);

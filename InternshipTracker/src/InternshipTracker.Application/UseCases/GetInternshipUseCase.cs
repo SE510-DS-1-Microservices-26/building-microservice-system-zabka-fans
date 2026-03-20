@@ -18,34 +18,34 @@ public class GetInternshipUseCase : IUseCase<GetInternshipRequest, InternshipRes
     }
 
     public async Task<Result<InternshipResponse>> ExecuteAsync(
-        GetInternshipRequest request, 
+        GetInternshipRequest request,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var internship = await _internshipRepository.GetByIdAsync(request.InternshipId, cancellationToken);
-            
+
             if (internship == null)
             {
                 return Result<InternshipResponse>.Failure(new Error(
-                    "Internship.NotFound", 
-                    $"Internship with ID {request.InternshipId} was not found.", 
+                    "Internship.NotFound",
+                    $"Internship with ID {request.InternshipId} was not found.",
                     ErrorType.NotFound));
             }
 
             var response = new InternshipResponse(
-                internship.Id, 
-                internship.Title, 
-                internship.Capacity, 
+                internship.Id,
+                internship.Title,
+                internship.Capacity,
                 internship.MinimumLevel);
-                
+
             return Result<InternshipResponse>.Success(response);
         }
         catch (Exception)
         {
             return Result<InternshipResponse>.Failure(new Error(
-                "System.Failure", 
-                "An unexpected error occurred while fetching the internship.", 
+                "System.Failure",
+                "An unexpected error occurred while fetching the internship.",
                 ErrorType.Failure));
         }
     }

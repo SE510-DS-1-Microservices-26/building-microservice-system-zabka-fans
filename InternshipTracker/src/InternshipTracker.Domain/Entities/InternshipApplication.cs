@@ -11,9 +11,10 @@ public class InternshipApplication : IEntity
     public ApplicationStatus Status { get; private set; }
 
     // for EF core 
-    private InternshipApplication() 
-    { 
+    private InternshipApplication()
+    {
     }
+
     internal InternshipApplication(Guid id, User candidate, Internship internship)
     {
         Id = id;
@@ -24,6 +25,7 @@ public class InternshipApplication : IEntity
 
     internal void MarkAsAccepted() => Status = ApplicationStatus.Accepted;
     internal void MarkAsEnrolled() => Status = ApplicationStatus.Enrolled;
+
     public void MarkAsRejected()
     {
         if (Status == ApplicationStatus.Enrolled)
@@ -31,7 +33,7 @@ public class InternshipApplication : IEntity
             throw new InvalidApplicationStateException(
                 "Cannot reject an application after the candidate has already officially enrolled.");
         }
-        
+
         Status = ApplicationStatus.Rejected;
     }
 }

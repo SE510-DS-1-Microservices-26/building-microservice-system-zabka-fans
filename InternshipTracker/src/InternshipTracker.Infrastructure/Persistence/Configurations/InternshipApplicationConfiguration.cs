@@ -15,10 +15,10 @@ public class InternshipApplicationConfiguration : IEntityTypeConfiguration<Inter
         builder.Property(internshipApplication => internshipApplication.Status)
             .HasConversion<string>()
             .IsRequired();
-        
+
         builder.HasOne(internshipApplication => internshipApplication.Candidate)
             .WithMany()
-            .HasForeignKey("CandidateId") 
+            .HasForeignKey("CandidateId")
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(internshipApplication => internshipApplication.Internship)

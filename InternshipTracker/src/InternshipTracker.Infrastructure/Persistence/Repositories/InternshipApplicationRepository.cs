@@ -46,7 +46,7 @@ public class InternshipApplicationRepository : IInternshipApplicationRepository
             _context.Applications.Remove(internshipApplication);
         }
     }
-    
+
     public async Task<InternshipApplication?> GetWithDetailsAsync(Guid id,
         CancellationToken cancellationToken = default)
     {
@@ -55,29 +55,32 @@ public class InternshipApplicationRepository : IInternshipApplicationRepository
             .Include(internshipApplication => internshipApplication.Internship)
             .FirstOrDefaultAsync(internshipApplication => internshipApplication.Id == id, cancellationToken);
     }
-    
+
     public async Task<int> CountReservedSpotsAsync(Guid internshipId, CancellationToken cancellationToken = default)
     {
         return await _context.Applications
-            .Where(internshipApplication => EF.Property<Guid>(internshipApplication, "InternshipId") == internshipId && 
-                        (internshipApplication.Status == ApplicationStatus.Accepted || internshipApplication.Status == ApplicationStatus.Enrolled))
+            .Where(internshipApplication => EF.Property<Guid>(internshipApplication, "InternshipId") == internshipId &&
+                                            (internshipApplication.Status == ApplicationStatus.Accepted ||
+                                             internshipApplication.Status == ApplicationStatus.Enrolled))
             .CountAsync(cancellationToken);
     }
-    
+
     public async Task<bool> ExistsAsync(Guid candidateId, Guid internshipId,
         CancellationToken cancellationToken = default)
     {
         return await _context.Applications
             .AnyAsync(internshipApplication => EF.Property<Guid>(internshipApplication, "CandidateId") == candidateId
-                           && EF.Property<Guid>(internshipApplication, "InternshipId") == internshipId,
+                                               && EF.Property<Guid>(internshipApplication, "InternshipId") ==
+                                               internshipId,
                 cancellationToken);
     }
-    
+
     public async Task<bool> HasStatusAsync(Guid candidateId, ApplicationStatus status,
         CancellationToken cancellationToken = default)
     {
         return await _context.Applications
-            .AnyAsync(internshipApplication => EF.Property<Guid>(internshipApplication, "CandidateId") == candidateId && internshipApplication.Status == status, cancellationToken);
+            .AnyAsync(
+                internshipApplication => EF.Property<Guid>(internshipApplication, "CandidateId") == candidateId &&
+                                         internshipApplication.Status == status, cancellationToken);
     }
-    
 }

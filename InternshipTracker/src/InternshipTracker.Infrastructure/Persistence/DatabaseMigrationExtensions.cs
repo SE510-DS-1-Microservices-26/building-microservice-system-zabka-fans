@@ -26,7 +26,7 @@ public static class DatabaseMigrationExtensions
         {
             var logger = scopedProvider.GetRequiredService<ILogger<AppDbContext>>();
             logger.LogError(ex, "An error occurred while applying database migrations.");
-            throw; 
+            throw;
         }
     }
 }
