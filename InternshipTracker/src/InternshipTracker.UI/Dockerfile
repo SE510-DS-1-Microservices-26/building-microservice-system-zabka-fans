@@ -10,6 +10,7 @@ WORKDIR /src
 COPY ["src/InternshipTracker.UI/InternshipTracker.UI.csproj", "src/InternshipTracker.UI/"]
 COPY ["src/InternshipTracker.Application/InternshipTracker.Application.csproj", "src/InternshipTracker.Application/"]
 COPY ["src/InternshipTracker.Domain/InternshipTracker.Domain.csproj", "src/InternshipTracker.Domain/"]
+COPY ["src/InternshipTracker.Infrastructure/InternshipTracker.Infrastructure.csproj", "src/InternshipTracker.Infrastructure/"]
 RUN dotnet restore "src/InternshipTracker.UI/InternshipTracker.UI.csproj"
 COPY . .
 WORKDIR "/src/src/InternshipTracker.UI"
