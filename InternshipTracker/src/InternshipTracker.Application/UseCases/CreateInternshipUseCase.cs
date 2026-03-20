@@ -18,25 +18,26 @@ public class CreateInternshipUseCase : IUseCase<CreateInternshipRequest, Interns
     }
 
     public async Task<Result<InternshipResponse>> ExecuteAsync(
-        CreateInternshipRequest request, 
+        CreateInternshipRequest request,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var internship = new Internship(Guid.NewGuid(), request.Title, request.Capacity, request.MinimumLevel);
-            
+
             await _internshipRepository.AddAsync(internship, cancellationToken);
             await _internshipRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
-            var response = new InternshipResponse(internship.Id, internship.Title, internship.Capacity, internship.MinimumLevel);
+            var response = new InternshipResponse(internship.Id, internship.Title, internship.Capacity,
+                internship.MinimumLevel);
             return Result<InternshipResponse>.Success(response);
         }
         catch (Exception)
         {
             // Maps to a 500 Internal Server Error in the UI
             return Result<InternshipResponse>.Failure(new Error(
-                "System.Failure", 
-                "An unexpected error occurred while creating the internship.", 
+                "System.Failure",
+                "An unexpected error occurred while creating the internship.",
                 ErrorType.Failure));
         }
     }

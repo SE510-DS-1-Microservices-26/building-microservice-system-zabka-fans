@@ -35,13 +35,13 @@ public class ApplyForInternshipUseCase : IUseCase<ApplyForInternshipRequest, App
         try
         {
             var candidate = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-            
+
             if (candidate == null)
                 return Result<ApplyForInternshipResponse>.Failure(
                     new Error("User.NotFound", "Candidate not found.", ErrorType.NotFound));
 
             var internship = await _internshipRepository.GetByIdAsync(request.InternshipId, cancellationToken);
-            
+
             if (internship == null)
                 return Result<ApplyForInternshipResponse>.Failure(
                     new Error("Internship.NotFound", "Internship not found.", ErrorType.NotFound));

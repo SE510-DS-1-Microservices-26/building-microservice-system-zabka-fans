@@ -1,0 +1,27 @@
+﻿services:
+#  internshiptracker.ui:
+#    image: internshiptracker.ui
+#    build:
+#      context: .
+#      dockerfile: src/InternshipTracker.UI/Dockerfile
+#    ports:
+#      - "8080:8080"
+#    depends_on:
+#      - db
+#    environment:
+#      # override the local connection string when running in Docker
+#      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=internship_tracker_db;Username=postgres;Password=Password123!
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Password123!
+      POSTGRES_DB: internship_tracker_db
+    ports:
+      - "5432:5432" # expose port for local debugging
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

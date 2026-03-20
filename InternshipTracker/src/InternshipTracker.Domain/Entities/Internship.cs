@@ -10,7 +10,7 @@ public class Internship : IEntity
     public string Title { get; private set; }
     public int Capacity { get; private set; }
     public CandidateLevel MinimumLevel { get; private set; }
-    
+
     public Internship(Guid id, string title, int capacity, CandidateLevel minimumLevel)
     {
         Id = id;
@@ -21,13 +21,13 @@ public class Internship : IEntity
 
     // Capacity Limit
     public async Task OfferPositionAsync(
-        InternshipApplication application, 
+        InternshipApplication application,
         IInternshipCapacityChecker capacityChecker,
         CancellationToken cancellationToken = default)
     {
         if (application.Internship.Id != this.Id)
             throw new ApplicationMismatchException("This application does not belong to the current internship.");
-        
+
         int reservedSpots = await capacityChecker.CountReservedSpotsAsync(this.Id, cancellationToken);
 
         if (reservedSpots >= Capacity)

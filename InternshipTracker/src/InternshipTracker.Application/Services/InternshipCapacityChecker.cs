@@ -15,10 +15,8 @@ public class InternshipCapacityChecker : IInternshipCapacityChecker
 
     public async Task<int> CountReservedSpotsAsync(Guid internshipId, CancellationToken cancellationToken = default)
     {
-        return await _repository.CountByInternshipAndStatusesAsync(
-            internshipId, 
-            [ApplicationStatus.Accepted, 
-            ApplicationStatus.Enrolled],
+        return await _repository.CountReservedSpotsAsync(
+            internshipId,
             cancellationToken);
     }
 }

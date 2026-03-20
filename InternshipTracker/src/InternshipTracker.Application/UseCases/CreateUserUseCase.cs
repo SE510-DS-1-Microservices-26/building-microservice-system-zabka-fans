@@ -18,13 +18,13 @@ public class CreateUserUseCase : IUseCase<CreateUserRequest, CreateUserResponse>
     }
 
     public async Task<Result<CreateUserResponse>> ExecuteAsync(
-        CreateUserRequest request, 
+        CreateUserRequest request,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var user = new User(Guid.NewGuid(), request.Name, request.Level);
-            
+
             await _userRepository.AddAsync(user, cancellationToken);
             await _userRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -34,8 +34,8 @@ public class CreateUserUseCase : IUseCase<CreateUserRequest, CreateUserResponse>
         catch (Exception)
         {
             return Result<CreateUserResponse>.Failure(new Error(
-                "System.Failure", 
-                "An unexpected error occurred while creating the user.", 
+                "System.Failure",
+                "An unexpected error occurred while creating the user.",
                 ErrorType.Failure));
         }
     }

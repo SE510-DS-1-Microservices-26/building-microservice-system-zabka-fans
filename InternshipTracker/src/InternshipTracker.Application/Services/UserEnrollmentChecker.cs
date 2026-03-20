@@ -14,7 +14,7 @@ public class UserEnrollmentChecker : IUserEnrollmentChecker
     }
 
     public async Task<bool> IsAlreadyEnrolledAsync(
-        Guid candidateId, 
+        Guid candidateId,
         CancellationToken cancellationToken = default)
     {
         return await _repository.HasStatusAsync(candidateId, ApplicationStatus.Enrolled, cancellationToken);
