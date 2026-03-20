@@ -42,7 +42,7 @@ public class DomainTests
     }
 
     [Test]
-    public void OfferPosition_WhenCapacityIsFull_ThrowsInvalidExceededException()
+    public void OfferPosition_WhenCapacityIsFull_ThrowsCapacityExceededException()
     {
         // Arrange
         var internship = new Internship(Guid.NewGuid(), "Software Intern", 2, CandidateLevel.Junior);
