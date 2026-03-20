@@ -10,14 +10,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.ToTable("Users");
 
-        builder.HasKey(u => u.Id);
+        builder.HasKey(user => user.Id);
 
-        builder.Property(u => u.Name)
+        builder.Property(user => user.Name)
             .IsRequired()
             .HasMaxLength(200);
 
         // store the enum as a readable string in the DB
-        builder.Property(u => u.Level)
+        builder.Property(user => user.Level)
             .HasConversion<string>()
             .IsRequired();
     }

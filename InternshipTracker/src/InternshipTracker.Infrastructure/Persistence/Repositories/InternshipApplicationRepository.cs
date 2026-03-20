@@ -46,8 +46,7 @@ public class InternshipApplicationRepository : IInternshipApplicationRepository
             _context.Applications.Remove(internshipApplication);
         }
     }
-
-    // Fetches the application AND its aggregate roots so the Use Case can mutate state
+    
     public async Task<InternshipApplication?> GetWithDetailsAsync(Guid id,
         CancellationToken cancellationToken = default)
     {

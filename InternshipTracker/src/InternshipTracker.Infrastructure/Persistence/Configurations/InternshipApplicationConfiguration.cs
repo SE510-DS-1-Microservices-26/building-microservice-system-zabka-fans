@@ -12,7 +12,7 @@ public class InternshipApplicationConfiguration : IEntityTypeConfiguration<Inter
 
         builder.HasKey(internshipApplication => internshipApplication.Id);
 
-        builder.Property(a => a.Status)
+        builder.Property(internshipApplication => internshipApplication.Status)
             .HasConversion<string>()
             .IsRequired();
         
@@ -21,7 +21,7 @@ public class InternshipApplicationConfiguration : IEntityTypeConfiguration<Inter
             .HasForeignKey("CandidateId") 
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(a => a.Internship)
+        builder.HasOne(internshipApplication => internshipApplication.Internship)
             .WithMany()
             .HasForeignKey("InternshipId")
             .OnDelete(DeleteBehavior.Cascade);

@@ -10,6 +10,10 @@ public class InternshipApplication : IEntity
     public Internship Internship { get; private set; }
     public ApplicationStatus Status { get; private set; }
 
+    // for EF core 
+    private InternshipApplication() 
+    { 
+    }
     internal InternshipApplication(Guid id, User candidate, Internship internship)
     {
         Id = id;

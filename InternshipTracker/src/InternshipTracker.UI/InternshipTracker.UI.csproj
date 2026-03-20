@@ -11,6 +11,14 @@
 
     <ItemGroup>
       <ProjectReference Include="..\InternshipTracker.Application\InternshipTracker.Application.csproj" />
+      <ProjectReference Include="..\InternshipTracker.Infrastructure\InternshipTracker.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
     </ItemGroup>
 
 </Project>
