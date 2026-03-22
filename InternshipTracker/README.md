@@ -65,7 +65,7 @@ We have chosen a modular monolith over microservices because:
    dotnet run --project src/InternshipTracker.UI
    ```
 
-   The API will be available at `http://localhost:5000`.
+   The API URL will be shown in the `dotnet run` output (for example, `http://localhost:5294` or `https://localhost:7069`).
 
 ### Run Tests
 
