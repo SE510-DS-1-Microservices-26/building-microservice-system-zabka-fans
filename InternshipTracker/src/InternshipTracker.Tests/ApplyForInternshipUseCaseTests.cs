@@ -17,30 +17,30 @@ public class ApplyForInternshipUseCaseTests
         // Arrange
         var userId = Guid.NewGuid();
         var internshipId = Guid.NewGuid();
-        
+
         var user = new User(userId, "Test User", CandidateLevel.Junior);
         var internship = new Internship(internshipId, "Test Internship", 10, CandidateLevel.Junior);
-        
+
         var userRepo = Substitute.For<IUserRepository>();
         userRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
-        
+
         var internshipRepo = Substitute.For<IInternshipRepository>();
         internshipRepo.GetByIdAsync(internshipId, Arg.Any<CancellationToken>()).Returns(internship);
-        
+
         var applicationRepo = Substitute.For<IInternshipApplicationRepository>();
-        
+
         var duplicationChecker = Substitute.For<IDuplicateApplicationChecker>();
         duplicationChecker
             .HasAppliedAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(false);
-        
+
         var factory = new InternshipApplicationFactory(duplicationChecker);
-        
+
         var useCase = new ApplyForInternshipUseCase(userRepo, internshipRepo, applicationRepo, factory);
-        
+
         // Act
         var result = await useCase.ExecuteAsync(new ApplyForInternshipRequest(userId, internshipId));
-        
+
         // Assert
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Value!.Status, Is.EqualTo(ApplicationStatus.Pending));

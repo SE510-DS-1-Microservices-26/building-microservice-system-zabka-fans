@@ -9,12 +9,12 @@ public class UserRepository : IUserRepository
 {
     private readonly AppDbContext _context;
 
-    public IUnitOfWork UnitOfWork => _context;
-
     public UserRepository(AppDbContext context)
     {
         _context = context;
     }
+
+    public IUnitOfWork UnitOfWork => _context;
 
     public async Task AddAsync(User entity, CancellationToken cancellationToken = default)
     {
@@ -40,9 +40,6 @@ public class UserRepository : IUserRepository
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var user = await GetByIdAsync(id, cancellationToken);
-        if (user != null)
-        {
-            _context.Users.Remove(user);
-        }
+        if (user != null) _context.Users.Remove(user);
     }
 }

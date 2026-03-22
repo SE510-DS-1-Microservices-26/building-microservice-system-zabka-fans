@@ -11,10 +11,10 @@ public class HealthEndpointTests
         // Arrange
         var factory = new WebApplicationFactory<Program>();
         var client = factory.CreateClient();
-        
+
         // Act
         var response = await client.GetAsync("/health");
-        
+
         // Assert
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
