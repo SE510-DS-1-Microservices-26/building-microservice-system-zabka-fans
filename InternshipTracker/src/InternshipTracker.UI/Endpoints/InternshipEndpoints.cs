@@ -14,7 +14,7 @@ public static class InternshipEndpoints
         internshipGroup.MapPost("/", CreateInternship);
         return app;
     }
-    
+
     private static async Task<IResult> GetInternship(
         Guid id,
         IUseCase<GetInternshipRequest, InternshipResponse> useCase)

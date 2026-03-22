@@ -14,7 +14,7 @@ public static class ApplicationEndpoints
         applicationGroup.MapPatch("/{id:guid}/status", ChangeApplicationStatus);
         return app;
     }
-    
+
     private static async Task<IResult> ApplyForApplication(
         ApplyForInternshipRequest request,
         IUseCase<ApplyForInternshipRequest, ApplyForInternshipResponse> useCase)
@@ -24,15 +24,15 @@ public static class ApplicationEndpoints
             ? Results.Created($"/applications/{result.Value!.ApplicationId}", result.Value)
             : ResultMapper.MapError(result.Error!);
     }
-    
+
     private static async Task<IResult> ChangeApplicationStatus(
-        Guid id,                                               
+        Guid id,
         ChangeApplicationStatusRequest request,
-        IUseCase<ChangeApplicationStatusRequest> useCase)                                                                      
-    {                                                    
-        var result = await useCase.ExecuteAsync(request with { ApplicationId = id });                                          
-        return result.IsSuccess                                                      
-            ? Results.NoContent()                                                                                              
-            : ResultMapper.MapError(result.Error!);                                                                            
+        IUseCase<ChangeApplicationStatusRequest> useCase)
+    {
+        var result = await useCase.ExecuteAsync(request with { ApplicationId = id });
+        return result.IsSuccess
+            ? Results.NoContent()
+            : ResultMapper.MapError(result.Error!);
     }
 }

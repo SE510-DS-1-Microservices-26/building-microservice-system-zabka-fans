@@ -6,11 +6,12 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
-        <RootNamespace>InternshipTracker.UnitTests</RootNamespace>
+        <RootNamespace>InternshipTracker.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="coverlet.collector" Version="6.0.4"/>
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0"/>
         <PackageReference Include="NSubstitute" Version="5.3.0"/>
         <PackageReference Include="NUnit" Version="4.3.2"/>
@@ -23,7 +24,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\InternshipTracker.Domain\InternshipTracker.Domain.csproj" />
+        <ProjectReference Include="..\InternshipTracker.Application\InternshipTracker.Application.csproj"/>
+        <ProjectReference Include="..\InternshipTracker.Domain\InternshipTracker.Domain.csproj"/>
+        <ProjectReference Include="..\InternshipTracker.UI\InternshipTracker.UI.csproj"/>
     </ItemGroup>
 
 </Project>

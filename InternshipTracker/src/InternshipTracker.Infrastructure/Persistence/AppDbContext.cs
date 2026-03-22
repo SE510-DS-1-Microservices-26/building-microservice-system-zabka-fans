@@ -6,13 +6,13 @@ namespace InternshipTracker.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext, IUnitOfWork
 {
-    public DbSet<User> Users => Set<User>();
-    public DbSet<Internship> Internships => Set<Internship>();
-    public DbSet<InternshipApplication> Applications => Set<InternshipApplication>();
-
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
+
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Internship> Internships => Set<Internship>();
+    public DbSet<InternshipApplication> Applications => Set<InternshipApplication>();
 
     public new async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {

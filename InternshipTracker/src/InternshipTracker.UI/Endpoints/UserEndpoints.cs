@@ -14,7 +14,7 @@ public static class UserEndpoints
         userGroup.MapPost("/", CreateUser);
         return app;
     }
-    
+
     private static async Task<IResult> GetUser(Guid id, IUseCase<GetUserRequest, GetUserResponse> useCase)
     {
         var result = await useCase.ExecuteAsync(new GetUserRequest(id));
@@ -22,7 +22,7 @@ public static class UserEndpoints
             ? Results.Ok(result.Value!)
             : ResultMapper.MapError(result.Error!);
     }
-    
+
     private static async Task<IResult> CreateUser(
         CreateUserRequest request,
         IUseCase<CreateUserRequest, CreateUserResponse> useCase)

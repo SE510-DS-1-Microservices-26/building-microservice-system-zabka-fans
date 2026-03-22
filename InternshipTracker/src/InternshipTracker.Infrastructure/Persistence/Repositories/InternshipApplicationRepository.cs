@@ -9,12 +9,13 @@ namespace InternshipTracker.Infrastructure.Persistence.Repositories;
 public class InternshipApplicationRepository : IInternshipApplicationRepository
 {
     private readonly AppDbContext _context;
-    public IUnitOfWork UnitOfWork => _context;
 
     public InternshipApplicationRepository(AppDbContext context)
     {
         _context = context;
     }
+
+    public IUnitOfWork UnitOfWork => _context;
 
     public async Task AddAsync(InternshipApplication entity, CancellationToken cancellationToken = default)
     {
@@ -41,10 +42,7 @@ public class InternshipApplicationRepository : IInternshipApplicationRepository
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var internshipApplication = await GetByIdAsync(id, cancellationToken);
-        if (internshipApplication != null)
-        {
-            _context.Applications.Remove(internshipApplication);
-        }
+        if (internshipApplication != null) _context.Applications.Remove(internshipApplication);
     }
 
     public async Task<InternshipApplication?> GetWithDetailsAsync(Guid id,
