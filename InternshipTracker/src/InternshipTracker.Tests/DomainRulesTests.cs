@@ -5,7 +5,7 @@ using InternshipTracker.Domain.Factories;
 using InternshipTracker.Domain.Interfaces;
 using NSubstitute;
 
-namespace InternshipTracker.UnitTests;
+namespace InternshipTracker.Tests;
 
 public class DomainTests
 {

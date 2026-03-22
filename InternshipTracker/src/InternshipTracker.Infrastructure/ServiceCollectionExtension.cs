@@ -4,6 +4,7 @@ using InternshipTracker.Application.Interfaces;
 using InternshipTracker.Application.Interfaces.Repositories;
 using InternshipTracker.Application.Services;
 using InternshipTracker.Application.UseCases;
+using InternshipTracker.Domain.Entities;
 using InternshipTracker.Domain.Factories;
 using InternshipTracker.Domain.Interfaces;
 using InternshipTracker.Infrastructure.Persistence;
@@ -39,6 +40,9 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<GetInternshipRequest, InternshipResponse>, GetInternshipUseCase>();
         services.AddScoped<IUseCase<ApplyForInternshipRequest, ApplyForInternshipResponse>, ApplyForInternshipUseCase>();
         services.AddScoped<IUseCase<ChangeApplicationStatusRequest>, ChangeApplicationStatusUseCase>();
+        
+        services.AddScoped<IReadOnlyRepository<User>>(sp => sp.GetRequiredService<IUserRepository>());                             
+        services.AddScoped<IReadOnlyRepository<Internship>>(sp => sp.GetRequiredService<IInternshipRepository>());
 
         return services;
     }
