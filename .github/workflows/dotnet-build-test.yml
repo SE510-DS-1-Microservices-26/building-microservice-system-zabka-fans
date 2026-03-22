@@ -1,33 +1,48 @@
 name: .NET CI
+on:                                                                                                                        
+    push:         
+      branches: [ "main" ]
+    pull_request:                                                                                                            
+      branches: [ "main" ]                                                                                                                            
+  jobs:           
+    build-and-test:                                                                                                          
+      runs-on: ubuntu-latest
+                                                                                                                             
+      services:
+        postgres:                                                                                                            
+          image: postgres:16-alpine
+          env:
+            POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB: ${{ secrets.POSTGRES_DB }}                                                                          
+          ports:
+            - 5432:5432                                                                                                      
+          options: >-
+            --health-cmd="pg_isready -U postgres"
+            --health-interval=10s                                                                                            
+            --health-timeout=5s                                                                                              
+            --health-retries=5                                                                                               
+                                                                                                                             
+      defaults:   
+        run:                                                                                                                 
+          working-directory: ./InternshipTracker
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+      steps:
+        - name: Checkout Code
+          uses: actions/checkout@v4
+                                                                                                                             
+        - name: Setup .NET 10
+          uses: actions/setup-dotnet@v4                                                                                      
+          with:                                                                                                              
+            dotnet-version: '10.0.x'
+                                                                                                                             
+        - name: Restore Dependencies
+          run: dotnet restore
 
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: ./InternshipTracker
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Restore Dependencies
-        run: dotnet restore
-
-      - name: Build Application
-        run: dotnet build --no-restore --configuration Release
-
-      - name: Run Unit Tests
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        - name: Build Application                                                                                            
+          run: dotnet build --no-restore --configuration Release
+                                                                                                                             
+        - name: Run Tests
+          run: dotnet test --no-build --configuration Release --verbosity normal                                             
+          env:    
+            ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=${{ secrets.POSTGRES_DB }};Username=${{ secrets.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}"
