@@ -34,7 +34,6 @@ public class CreateInternshipUseCase : IUseCase<CreateInternshipRequest, Interns
         }
         catch (Exception)
         {
-            // Maps to a 500 Internal Server Error in the UI
             return Result<InternshipResponse>.Failure(new Error(
                 "System.Failure",
                 "An unexpected error occurred while creating the internship.",

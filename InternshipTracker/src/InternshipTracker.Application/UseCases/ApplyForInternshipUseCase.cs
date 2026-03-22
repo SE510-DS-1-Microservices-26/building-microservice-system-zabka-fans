@@ -11,10 +11,10 @@ namespace InternshipTracker.Application.UseCases;
 
 public class ApplyForInternshipUseCase : IUseCase<ApplyForInternshipRequest, ApplyForInternshipResponse>
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IInternshipRepository _internshipRepository;
     private readonly IInternshipApplicationRepository _applicationRepository;
     private readonly InternshipApplicationFactory _domainFactory;
+    private readonly IInternshipRepository _internshipRepository;
+    private readonly IUserRepository _userRepository;
 
     public ApplyForInternshipUseCase(
         IUserRepository userRepository,

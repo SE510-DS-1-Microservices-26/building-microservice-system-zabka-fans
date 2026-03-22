@@ -16,7 +16,6 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(200);
 
-        // store the enum as a readable string in the DB
         builder.Property(user => user.Level)
             .HasConversion<string>()
             .IsRequired();

@@ -26,12 +26,10 @@ public class GetInternshipUseCase : IUseCase<GetInternshipRequest, InternshipRes
             var internship = await _internshipRepository.GetByIdAsync(request.InternshipId, cancellationToken);
 
             if (internship == null)
-            {
                 return Result<InternshipResponse>.Failure(new Error(
                     "Internship.NotFound",
                     $"Internship with ID {request.InternshipId} was not found.",
                     ErrorType.NotFound));
-            }
 
             var response = new InternshipResponse(
                 internship.Id,

@@ -26,7 +26,6 @@ public class InternshipApplicationConfiguration : IEntityTypeConfiguration<Inter
             .HasForeignKey("InternshipId")
             .OnDelete(DeleteBehavior.Cascade);
 
-        // safeguard: prevents a candidate from applying to the same internship twice
         builder.HasIndex("CandidateId", "InternshipId")
             .IsUnique();
     }

@@ -1,4 +1,12 @@
+using InternshipTracker.Application.DTOs.Requests;
+using InternshipTracker.Application.DTOs.Responses;
+using InternshipTracker.Application.Interfaces;
 using InternshipTracker.Application.Interfaces.Repositories;
+using InternshipTracker.Application.Services;
+using InternshipTracker.Application.UseCases;
+using InternshipTracker.Domain.Entities;
+using InternshipTracker.Domain.Factories;
+using InternshipTracker.Domain.Interfaces;
 using InternshipTracker.Infrastructure.Persistence;
 using InternshipTracker.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +22,34 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+        {
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrEmpty(connectionString))
+                connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
+
+            options.UseNpgsql(connectionString);
+        });
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IInternshipRepository, InternshipRepository>();
         services.AddScoped<IInternshipApplicationRepository, InternshipApplicationRepository>();
+
+        services.AddScoped<IDuplicateApplicationChecker, DuplicateApplicationChecker>();
+        services.AddScoped<IInternshipCapacityChecker, InternshipCapacityChecker>();
+        services.AddScoped<IUserEnrollmentChecker, UserEnrollmentChecker>();
+
+        services.AddScoped<InternshipApplicationFactory>();
+
+        services.AddScoped<IUseCase<CreateUserRequest, CreateUserResponse>, CreateUserUseCase>();
+        services.AddScoped<IUseCase<GetUserRequest, GetUserResponse>, GetUserUseCase>();
+        services.AddScoped<IUseCase<CreateInternshipRequest, InternshipResponse>, CreateInternshipUseCase>();
+        services.AddScoped<IUseCase<GetInternshipRequest, InternshipResponse>, GetInternshipUseCase>();
+        services
+            .AddScoped<IUseCase<ApplyForInternshipRequest, ApplyForInternshipResponse>, ApplyForInternshipUseCase>();
+        services.AddScoped<IUseCase<ChangeApplicationStatusRequest>, ChangeApplicationStatusUseCase>();
+
+        services.AddScoped<IReadOnlyRepository<User>>(sp => sp.GetRequiredService<IUserRepository>());
+        services.AddScoped<IReadOnlyRepository<Internship>>(sp => sp.GetRequiredService<IInternshipRepository>());
 
         return services;
     }
