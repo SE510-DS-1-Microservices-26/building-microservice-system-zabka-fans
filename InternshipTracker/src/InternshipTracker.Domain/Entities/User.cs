@@ -1,4 +1,3 @@
-using System.Net.Mime;
 using InternshipTracker.Domain.Enums;
 using InternshipTracker.Domain.Exceptions;
 using InternshipTracker.Domain.Interfaces;
