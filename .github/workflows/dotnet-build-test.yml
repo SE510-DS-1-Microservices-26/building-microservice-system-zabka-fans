@@ -1,33 +1,49 @@
 name: .NET CI
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on:                                                                                                                        
+    push:                                                                                                                    
+      branches: [ "main" ]                                                                                                   
+    pull_request: 
+      branches: [ "main" ]
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+    build-and-test:
+      runs-on: ubuntu-latest                                                                                                 
+                                                                                                                             
+      services:                                                                                                              
+        postgres:                                                                                                            
+          image: postgres:16-alpine
+          env:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: internship_tracker_db                                                                               
+          ports:
+            - 5432:5432                                                                                                      
+          options: >-
+            --health-cmd="pg_isready -U postgres"
+            --health-interval=10s
+            --health-timeout=5s
+            --health-retries=5                                                                                               
+   
+      defaults:                                                                                                              
+        run:      
+          working-directory: ./InternshipTracker                                                                             
+                                                                                                                             
+      steps:
+        - name: Checkout Code                                                                                                
+          uses: actions/checkout@v4
 
-    defaults:
-      run:
-        working-directory: ./InternshipTracker
+        - name: Setup .NET 10                                                                                                
+          uses: actions/setup-dotnet@v4
+          with:                                                                                                              
+            dotnet-version: '10.0.x'
 
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Restore Dependencies
-        run: dotnet restore
-
-      - name: Build Application
-        run: dotnet build --no-restore --configuration Release
-
-      - name: Run Unit Tests
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        - name: Restore Dependencies                                                                                         
+          run: dotnet restore
+                                                                                                                             
+        - name: Build Application
+          run: dotnet build --no-restore --configuration Release
+                                                                                                                             
+        - name: Run Tests
+          run: dotnet test --no-build --configuration Release --verbosity normal                                             
+          env:                                                                                                               
+            ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=internship_tracker_db;Username=postgres;Password=Password123!"
