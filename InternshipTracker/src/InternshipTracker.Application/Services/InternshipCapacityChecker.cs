@@ -1,5 +1,4 @@
 using InternshipTracker.Application.Interfaces.Repositories;
-using InternshipTracker.Domain.Enums;
 using InternshipTracker.Domain.Interfaces;
 
 namespace InternshipTracker.Application.Services;

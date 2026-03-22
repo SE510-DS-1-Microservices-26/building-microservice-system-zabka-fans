@@ -26,12 +26,10 @@ public class GetUserUseCase : IUseCase<GetUserRequest, GetUserResponse>
             var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
 
             if (user == null)
-            {
                 return Result<GetUserResponse>.Failure(new Error(
                     "User.NotFound",
                     $"User with ID {request.UserId} was not found.",
                     ErrorType.NotFound));
-            }
 
             var response = new GetUserResponse(user.Id, user.Name, user.Level);
 

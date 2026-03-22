@@ -32,12 +32,10 @@ public class ChangeApplicationStatusUseCase : IUseCase<ChangeApplicationStatusRe
             var application = await _appRepository.GetWithDetailsAsync(request.ApplicationId, cancellationToken);
 
             if (application == null)
-            {
                 return Result.Failure(new Error(
                     "Application.NotFound",
                     $"Application with ID {request.ApplicationId} was not found.",
                     ErrorType.NotFound));
-            }
 
             switch (request.NewStatus)
             {
@@ -46,7 +44,6 @@ public class ChangeApplicationStatusUseCase : IUseCase<ChangeApplicationStatusRe
                     break;
 
                 case ApplicationStatus.Enrolled:
-                    // Can throw AlreadyEnrolledException, InvalidApplicationStateException, or Mismatch
                     await application.Candidate.EnrollAsync(application, _userEnrollmentChecker);
                     break;
 
@@ -73,27 +70,22 @@ public class ChangeApplicationStatusUseCase : IUseCase<ChangeApplicationStatusRe
         }
         catch (CapacityExceededException ex)
         {
-            // maps to a 409 Conflict
             return Result.Failure(new Error("Internship.CapacityExceeded", ex.Message, ErrorType.Conflict));
         }
         catch (AlreadyEnrolledException ex)
         {
-            // maps to a 409 Conflict
             return Result.Failure(new Error("Candidate.AlreadyEnrolled", ex.Message, ErrorType.Conflict));
         }
         catch (InvalidApplicationStateException ex)
         {
-            // maps to a 400 Bad Request
             return Result.Failure(new Error("Application.InvalidState", ex.Message, ErrorType.Validation));
         }
         catch (ApplicationMismatchException ex)
         {
-            // maps to a 400 Bad Request
             return Result.Failure(new Error("Application.Mismatch", ex.Message, ErrorType.Validation));
         }
         catch (Exception ex)
         {
-            // maps to a 500 
             return Result.Failure(new Error("System.Failure",
                 "An unexpected error occurred processing the status change.", ErrorType.Failure));
         }

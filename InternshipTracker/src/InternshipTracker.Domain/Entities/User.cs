@@ -6,16 +6,16 @@ namespace InternshipTracker.Domain.Entities;
 
 public class User : IEntity
 {
-    public Guid Id { get; init; }
-    public string Name { get; private set; }
-    public CandidateLevel Level { get; private set; }
-
     public User(Guid id, string name, CandidateLevel level)
     {
         Id = id;
         Name = name;
         Level = level;
     }
+
+    public string Name { get; private set; }
+    public CandidateLevel Level { get; private set; }
+    public Guid Id { get; init; }
 
     // Exclusive Enrollment
     public async Task EnrollAsync(
@@ -24,7 +24,7 @@ public class User : IEntity
         CancellationToken cancellationToken = default)
     {
         // 1. Safety check using IDs
-        if (application.Candidate.Id != this.Id)
+        if (application.Candidate.Id != Id)
             throw new ApplicationMismatchException("This application does not belong to the current user.");
 
         if (application.Status != ApplicationStatus.Accepted)
@@ -32,7 +32,7 @@ public class User : IEntity
                 $"Cannot enroll. Application status is currently '{application.Status}', expected 'Accepted'.");
 
         // 2. Await the DB-optimized check via the injected domain service
-        bool isAlreadyEnrolled = await enrollmentChecker.IsAlreadyEnrolledAsync(this.Id, cancellationToken);
+        var isAlreadyEnrolled = await enrollmentChecker.IsAlreadyEnrolledAsync(Id, cancellationToken);
 
         if (isAlreadyEnrolled)
             throw new AlreadyEnrolledException("Candidate is already officially enrolled in another internship.");
