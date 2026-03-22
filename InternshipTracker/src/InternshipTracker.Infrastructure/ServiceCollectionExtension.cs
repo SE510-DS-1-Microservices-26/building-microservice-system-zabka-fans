@@ -41,7 +41,7 @@ public static class DependencyInjection
         services.AddScoped<InternshipApplicationFactory>();
 
         services.AddScoped<IUseCase<CreateUserRequest, CreateUserResponse>, CreateUserUseCase>();
-        services.AddScoped<IUseCase<GetUserRequest, GetUserResponse>, GetUserUseCase>();
+        services.AddScoped<IUseCase<GetUserRequest, GetUserResponse>, GetUserByIdUseCase>();
         services.AddScoped<IUseCase<CreateInternshipRequest, InternshipResponse>, CreateInternshipUseCase>();
         services.AddScoped<IUseCase<GetInternshipRequest, InternshipResponse>, GetInternshipUseCase>();
         services

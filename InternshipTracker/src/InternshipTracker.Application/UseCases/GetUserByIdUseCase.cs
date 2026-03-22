@@ -8,11 +8,11 @@ using InternshipTracker.Domain.Entities;
 
 namespace InternshipTracker.Application.UseCases;
 
-public class GetUserUseCase : IUseCase<GetUserRequest, GetUserResponse>
+public class GetUserByIdUseCase : IUseCase<GetUserRequest, GetUserResponse>
 {
     private readonly IReadOnlyRepository<User> _userRepository;
 
-    public GetUserUseCase(IReadOnlyRepository<User> userRepository)
+    public GetUserByIdUseCase(IReadOnlyRepository<User> userRepository)
     {
         _userRepository = userRepository;
     }
