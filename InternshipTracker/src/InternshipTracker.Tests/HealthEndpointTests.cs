@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
+using InternshipTracker.Tests.Helpers;
 
 namespace InternshipTracker.Tests;
 
@@ -9,7 +9,7 @@ public class HealthEndpointTests
     public async Task HealthEndpoint_ReturnsHealthy()
     {
         // Arrange
-        var factory = new WebApplicationFactory<Program>();
+        await using var factory = new TestWebApplicationFactory();
         var client = factory.CreateClient();
 
         // Act

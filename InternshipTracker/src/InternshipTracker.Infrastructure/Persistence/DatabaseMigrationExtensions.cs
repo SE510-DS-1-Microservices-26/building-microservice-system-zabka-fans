@@ -18,7 +18,10 @@ public static class DatabaseMigrationExtensions
 
             logger.LogInformation("Attempting to apply database migrations...");
 
-            await context.Database.MigrateAsync();
+            if (context.Database.IsRelational())
+                await context.Database.MigrateAsync();
+            else
+                await context.Database.EnsureCreatedAsync();
 
             logger.LogInformation("Database migrations applied successfully.");
         }
