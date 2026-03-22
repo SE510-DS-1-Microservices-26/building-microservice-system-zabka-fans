@@ -3,7 +3,8 @@ using InternshipTracker.Infrastructure;
 using InternshipTracker.Infrastructure.Persistence;
 using InternshipTracker.UI.Endpoints;
 
-Env.Load("../../.env");
+if (File.Exists("../../.env"))
+    Env.Load("../../.env");
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 
