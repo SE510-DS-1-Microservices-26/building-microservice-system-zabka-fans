@@ -1,36 +1,51 @@
 ﻿services:
-  internshiptracker.ui:
-    image: internshiptracker.ui
-    build:
-      context: .
-      dockerfile: src/InternshipTracker.UI/Dockerfile
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    environment:
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-  db:
+  core-db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: core_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - core_data:/var/lib/postgresql/data
   user-db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5433:5432"
+      POSTGRES_DB: user_db
     volumes:
       - users_data:/var/lib/postgresql/data
+  user-service:
+    build:
+      context: .
+      dockerfile: src/UserService/UserService.Api/Dockerfile
+    depends_on:
+        - user-db
+    environment:
+      ConnectionStrings__UsersDb: "Host=user-db;Port=5432;Database=user_db;Username=postgres;Password=Password123!"
+  core-service:
+    build:
+      context: .
+      dockerfile: src/CoreService/CoreService.Api/Dockerfile
+    depends_on:
+        - core-db
+        - user-service
+    environment:
+      ConnectionStrings__CoreDb: "Host=core-db;Port=5432;Database=core_db;Username=postgres;Password=Password123!"
+      UserService__BaseUrl: "http://user-service:8080"
+  gateway:
+    build:
+      context: .
+      dockerfile: src/Gateway/Dockerfile
+    depends_on:
+        - core-service
+        - user-service
+    ports:
+      - "8000:8080"
+    environment:
+      ReverseProxy__Clusters__core__Destinations__internships-destination__Address: "http://core-service:8080"
+      ReverseProxy__Clusters__users__Destinations__users-destination__Address: "http://users-service:8080"
 
 volumes:
-  postgres_data:
+  core_data:
   users_data:

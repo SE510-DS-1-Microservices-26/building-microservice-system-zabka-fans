@@ -3,11 +3,11 @@ WORKDIR /src
 COPY ["src/Gateway/Gateway.csproj", "src/Gateway/"]
 RUN dotnet restore "src/Gateway/Gateway.csproj"
 COPY ["src/Gateway/", "src/Gateway/"]
-RUN dotnet publish "./Gateway.csproj" -c Release -o /app/publish
+RUN dotnet publish "src/Gateway/Gateway.csproj" -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "Gateway.dll"]
+ENTRYPOINT ["dotnet", "Gateway.dll"]    
