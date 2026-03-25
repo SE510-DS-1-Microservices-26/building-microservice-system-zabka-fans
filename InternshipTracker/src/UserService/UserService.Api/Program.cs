@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UserService.Api;
+using UserService.Api.UserEndpoints;
 using UserService.Infrastructure;
 using UserService.Infrastructure.Persistence;
 
@@ -14,7 +15,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapUserEndpoints();
-app.MapGet("/health", () => Results.Ok("User Service is healthy"));
+app.MapHealthEndpoints();
 
 app.Run();
 

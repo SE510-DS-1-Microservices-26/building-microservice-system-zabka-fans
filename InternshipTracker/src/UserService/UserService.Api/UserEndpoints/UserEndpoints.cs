@@ -5,7 +5,7 @@ using UserService.Application.DTOs.Responses;
 using UserService.Application.Enums;
 using UserService.Application.Interfaces;
 
-namespace UserService.Api;
+namespace UserService.Api.UserEndpoints;
 
 public static class UserEndpoints
 {
