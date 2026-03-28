@@ -22,7 +22,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreService.Infrastructure"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreService.Api", "src\CoreService\CoreService.Api\CoreService.Api.csproj", "{9781714F-C386-4C05-86DD-B1328026B6F8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gateway", "src\Gateway\Gateway.csproj", "{924DA4D2-9186-4DC5-AA48-EE6D567D8ABE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GatewayService", "src\GatewayService\GatewayService.csproj", "{924DA4D2-9186-4DC5-AA48-EE6D567D8ABE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UserService", "UserService", "{CB753486-031C-08A7-C788-4C8CBC49DED1}"
 EndProject
