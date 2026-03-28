@@ -9,10 +9,12 @@ namespace UserService.Application.UseCases;
 public class CreateUserUseCase : IUseCase<CreateUserRequest, UserResponse>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IUserDbMessagePublisher _publisher;
 
-    public CreateUserUseCase(IUserRepository userRepository)
+    public CreateUserUseCase(IUserRepository userRepository, IUserDbMessagePublisher publisher)
     {
         _userRepository = userRepository;
+        _publisher = publisher;
     }
 
     public async Task<Result<UserResponse>> ExecuteAsync(
@@ -23,6 +25,9 @@ public class CreateUserUseCase : IUseCase<CreateUserRequest, UserResponse>
 
         await _userRepository.AddAsync(user, cancellationToken);
         await _userRepository.SaveChangesAsync(cancellationToken);
+
+        await _publisher.PublishUserCreatedAsync(
+            user.Id, user.Name, user.Level.ToString(), cancellationToken);
 
         var response = new UserResponse(user.Id, user.Name, user.Level);
         return Result<UserResponse>.Success(response);

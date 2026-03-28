@@ -1,11 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UserService.Application.DTOs.Requests;
 using UserService.Application.DTOs.Responses;
 using UserService.Application.Interfaces;
 using UserService.Application.UseCases;
-using UserService.Domain.Entities;
+using UserService.Infrastructure.Messaging;
 using UserService.Infrastructure.Persistence;
 using UserService.Infrastructure.Persistence.Repositories;
 
@@ -27,8 +28,26 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserDbMessagePublisher, UserDbMessagePublisher>();
         services.AddScoped<IUseCase<CreateUserRequest, UserResponse>, CreateUserUseCase>();
         services.AddScoped<IUseCase<GetUserRequest, UserResponse>, GetUserByIdUseCase>();
+
+        var rabbitHost = configuration["RabbitMQ:Host"] ?? "localhost";
+
+        services.AddMassTransit(cfg =>
+        {
+            cfg.UsingRabbitMq((context, rabbit) =>
+            {
+                rabbit.Host(rabbitHost, "/", h =>
+                {
+                    h.Username("guest");
+                    h.Password("guest");
+                });
+
+                rabbit.ConfigureEndpoints(context);
+            });
+        });
+
         return services;
     }
 }

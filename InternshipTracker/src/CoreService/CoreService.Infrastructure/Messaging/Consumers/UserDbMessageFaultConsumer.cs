@@ -1,23 +1,23 @@
-using CoreService.Infrastructure.Messaging.Messages;
+using Contracts.Users;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace CoreService.Infrastructure.Messaging.Consumers;
 
 public class UserDbMessageFaultConsumer :
-    IConsumer<Fault<UserCreatedDbMessage>>,
-    IConsumer<Fault<UserDeletedDbMessage>>
+    IConsumer<Fault<UserCreatedEvent>>,
+    IConsumer<Fault<UserDeletedEvent>>
 {
-    ILogger<UserDbMessageFaultConsumer> _logger;
+    private readonly ILogger<UserDbMessageFaultConsumer> _logger;
 
     public UserDbMessageFaultConsumer(ILogger<UserDbMessageFaultConsumer> logger)
     {
         _logger = logger;
     }
 
-    public Task Consume(ConsumeContext<Fault<UserCreatedDbMessage>> context) => LogFault(context);
+    public Task Consume(ConsumeContext<Fault<UserCreatedEvent>> context) => LogFault(context);
 
-    public Task Consume(ConsumeContext<Fault<UserDeletedDbMessage>> context) => LogFault(context);
+    public Task Consume(ConsumeContext<Fault<UserDeletedEvent>> context) => LogFault(context);
 
     private Task LogFault<T>(ConsumeContext<Fault<T>> context)
         where T : class

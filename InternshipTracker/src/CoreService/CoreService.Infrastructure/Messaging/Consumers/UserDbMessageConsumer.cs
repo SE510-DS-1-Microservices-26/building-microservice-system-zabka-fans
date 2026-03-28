@@ -1,13 +1,14 @@
+using Contracts.Users;
 using CoreService.Application.Interfaces.Repositories;
 using CoreService.Domain.Entities;
-using CoreService.Infrastructure.Messaging.Messages;
+using CoreService.Domain.Enums;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CoreService.Infrastructure.Messaging.Consumers;
 
-public class UserDbMessageConsumer : IConsumer<UserCreatedDbMessage>, IConsumer<UserDeletedDbMessage>
+public class UserDbMessageConsumer : IConsumer<UserCreatedEvent>, IConsumer<UserDeletedEvent>
 {
     private readonly ILogger<UserDbMessageConsumer> _logger;
     private readonly IUserCoreRepository _userCoreRepository;
@@ -18,7 +19,7 @@ public class UserDbMessageConsumer : IConsumer<UserCreatedDbMessage>, IConsumer<
         _userCoreRepository = userCoreRepository;
     }
 
-    public async Task Consume(ConsumeContext<UserCreatedDbMessage> context)
+    public async Task Consume(ConsumeContext<UserCreatedEvent> context)
     {
         var message = context.Message;
 
@@ -31,7 +32,13 @@ public class UserDbMessageConsumer : IConsumer<UserCreatedDbMessage>, IConsumer<
                 return;
             }
 
-            var user = new UserCore(message.Id, message.Name, message.Level);
+            if (!Enum.TryParse<CandidateLevel>(message.Level, out var level))
+            {
+                _logger.LogError("Invalid CandidateLevel '{Level}' received for user {UserId}", message.Level, message.Id);
+                return;
+            }
+
+            var user = new UserCore(message.Id, message.Name, level);
             var added = await _userCoreRepository.AddAsync(user, context.CancellationToken);
 
             if (added == null)
@@ -49,15 +56,15 @@ public class UserDbMessageConsumer : IConsumer<UserCreatedDbMessage>, IConsumer<
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(ex, "Consume of UserCreatedDbMessage was cancelled for user {UserId}", message.Id);
+            _logger.LogWarning(ex, "Consume of UserCreatedEvent was cancelled for user {UserId}", message.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error while consuming UserCreatedDbMessage for user {UserId}", message.Id);
+            _logger.LogError(ex, "Unexpected error while consuming UserCreatedEvent for user {UserId}", message.Id);
         }
     }
 
-    public async Task Consume(ConsumeContext<UserDeletedDbMessage> context)
+    public async Task Consume(ConsumeContext<UserDeletedEvent> context)
     {
         var message = context.Message;
 
@@ -86,11 +93,11 @@ public class UserDbMessageConsumer : IConsumer<UserCreatedDbMessage>, IConsumer<
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(ex, "Consume of UserDeletedDbMessage was cancelled for user {UserId}", message.UserId);
+            _logger.LogWarning(ex, "Consume of UserDeletedEvent was cancelled for user {UserId}", message.UserId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error while consuming UserDeletedDbMessage for user {UserId}", message.UserId);
+            _logger.LogError(ex, "Unexpected error while consuming UserDeletedEvent for user {UserId}", message.UserId);
         }
     }
 }
