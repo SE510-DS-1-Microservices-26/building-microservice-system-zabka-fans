@@ -7,6 +7,7 @@ using CoreService.Application.Services;
 using CoreService.Application.UseCases;
 using CoreService.Domain.Interfaces;
 using CoreService.Infrastructure.ExternalServices;
+using CoreService.Infrastructure.Messaging.Consumers;
 using CoreService.Infrastructure.Persistence;
 using CoreService.Infrastructure.Persistence.Repositories;
 using MassTransit;
@@ -33,6 +34,7 @@ public static class DependencyInjection
         
         services.AddScoped<IInternshipRepository, InternshipRepository>();
         services.AddScoped<IInternshipApplicationRepository, InternshipApplicationRepository>();
+        services.AddScoped<IUserCoreRepository, UserCoreRepository>();
 
         services.AddScoped<IDuplicateApplicationChecker, DuplicateApplicationChecker>();
         services.AddScoped<IInternshipCapacityChecker, InternshipCapacityChecker>();
@@ -53,8 +55,8 @@ public static class DependencyInjection
         
         services.AddMassTransit(cfg =>
         {
-            cfg.AddConsumer<UserDbEventConsumer>();
-            cfg.AddConsumer<UserDbEventFaultConsumer>();
+            cfg.AddConsumer<UserDbMessageConsumer>();
+            cfg.AddConsumer<UserDbMessageFaultConsumer>();
 
             //
             // cfg.AddConsumer<GameFaultConsumer>();
@@ -75,7 +77,7 @@ public static class DependencyInjection
             {
                 outboxCfg.QueryDelay = TimeSpan.FromSeconds(60);
                 outboxCfg.DuplicateDetectionWindow = TimeSpan.FromSeconds(60);
-                outboxCfg.UseSqlServer();
+                outboxCfg.UsePostgres();
             });
 
             cfg.AddConfigureEndpointsCallback((context, name, receiveConfigurator) =>

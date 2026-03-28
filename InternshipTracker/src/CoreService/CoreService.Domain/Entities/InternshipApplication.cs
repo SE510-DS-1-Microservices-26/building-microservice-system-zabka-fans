@@ -8,15 +8,17 @@ public class InternshipApplication
     public Guid Id { get; init; }
     public Guid CandidateId { get; private set; }
     public CandidateLevel CandidateLevel { get; private set; }
+    public UserCore Candidate { get; private set; }
     public Internship Internship { get; private set; }
     public ApplicationStatus Status { get; private set; }
     
-    public InternshipApplication(Guid id, Guid candidateId, CandidateLevel level, Internship internship)
+    public InternshipApplication(Guid id, Guid candidateId, CandidateLevel level, Internship internship, UserCore candidate)
     {
         Id = id;
         CandidateId = candidateId;
         CandidateLevel = level;
         Internship = internship;
+        Candidate = candidate;
         Status = ApplicationStatus.Pending;
     }
     

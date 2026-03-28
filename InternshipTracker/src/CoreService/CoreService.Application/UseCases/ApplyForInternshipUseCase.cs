@@ -15,17 +15,20 @@ public class ApplyForInternshipUseCase : IUseCase<ApplyForInternshipRequest, App
     private readonly InternshipApplicationFactory _domainFactory;
     private readonly IInternshipRepository _internshipRepository;
     private readonly IUserValidationService _userValidationService;
+    private readonly IUserCoreRepository _userCoreRepository;
 
     public ApplyForInternshipUseCase(
         IInternshipRepository internshipRepository,
         IInternshipApplicationRepository applicationRepository,
         InternshipApplicationFactory domainFactory,
-        IUserValidationService userValidationService)
+        IUserValidationService userValidationService,
+        IUserCoreRepository userCoreRepository)
     {
         _internshipRepository = internshipRepository;
         _applicationRepository = applicationRepository;
         _domainFactory = domainFactory;
         _userValidationService = userValidationService;
+        _userCoreRepository = userCoreRepository;
     }
 
     public async Task<Result<ApplyForInternshipResponse>> ExecuteAsync(
@@ -42,6 +45,14 @@ public class ApplyForInternshipUseCase : IUseCase<ApplyForInternshipRequest, App
                     ErrorType.Validation));
             }
 
+            var candidate = await _userCoreRepository.GetByIdAsync(request.UserId, cancellationToken);
+            if (candidate == null)
+            {
+                return Result<ApplyForInternshipResponse>.Failure(new Error("User.NotSynced",
+                    $"User with ID {request.UserId} has not been synced to the core database yet.",
+                    ErrorType.Validation));
+            }
+
             var internship = await _internshipRepository.GetByIdAsync(request.InternshipId, cancellationToken);
             if (internship == null)
             {
@@ -51,7 +62,7 @@ public class ApplyForInternshipUseCase : IUseCase<ApplyForInternshipRequest, App
             }
 
             var application =
-                await _domainFactory.CreateAsync(request.UserId, user.Level, internship, cancellationToken);
+                await _domainFactory.CreateAsync(request.UserId, user.Level, internship, candidate, cancellationToken);
 
             await _applicationRepository.AddAsync(application, cancellationToken);
             await _applicationRepository.UnitOfWork.SaveChangesAsync(cancellationToken);

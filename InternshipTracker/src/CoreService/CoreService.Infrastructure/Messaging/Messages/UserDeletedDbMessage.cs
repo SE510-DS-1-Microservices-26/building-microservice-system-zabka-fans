@@ -4,6 +4,5 @@ namespace CoreService.Infrastructure.Messaging.Messages;
 
 public class UserDeletedDbMessage
 {
-    [Required]
-    public Guid UserId { get; set; }
+    [Required] public Guid UserId { get; set; }
 }

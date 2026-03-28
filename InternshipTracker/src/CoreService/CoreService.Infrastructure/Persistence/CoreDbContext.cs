@@ -9,8 +9,10 @@ public class CoreDbContext : DbContext, IUnitOfWork
     public CoreDbContext(DbContextOptions<CoreDbContext> options) : base(options)
     {
     }
+
     public DbSet<Internship> Internships => Set<Internship>();
     public DbSet<InternshipApplication> Applications => Set<InternshipApplication>();
+    public DbSet<UserCore> Users => Set<UserCore>();
 
     public new async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {

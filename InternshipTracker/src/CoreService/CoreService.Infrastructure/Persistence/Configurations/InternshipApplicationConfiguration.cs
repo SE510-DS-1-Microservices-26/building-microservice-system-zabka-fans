@@ -20,7 +20,13 @@ public class InternshipApplicationConfiguration : IEntityTypeConfiguration<Inter
             .IsRequired();
         
         builder.Property(internshipApplication => internshipApplication.CandidateLevel)
+            .HasConversion<string>()
             .IsRequired();
+
+        builder.HasOne(internshipApplication => internshipApplication.Candidate)
+            .WithMany()
+            .HasForeignKey(internshipApplication => internshipApplication.CandidateId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(internshipApplication => internshipApplication.Internship)
             .WithMany()

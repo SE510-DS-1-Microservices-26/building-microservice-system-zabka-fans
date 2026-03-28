@@ -18,6 +18,7 @@ public class InternshipApplicationFactory
         Guid candidateId,
         CandidateLevel candidateLevel,
         Internship internship,
+        UserCore candidate,
         CancellationToken cancellationToken = default)
     {
         if (candidateLevel < internship.MinimumLevel)
@@ -27,6 +28,6 @@ public class InternshipApplicationFactory
         if (hasApplied)
             throw new DuplicateApplicationException("The candidate has already applied to this internship.");
 
-        return new InternshipApplication(Guid.NewGuid(), candidateId, candidateLevel, internship);
+        return new InternshipApplication(Guid.NewGuid(), candidateId, candidateLevel, internship, candidate);
     }
 }
