@@ -12,7 +12,7 @@ public class HttpUserValidationService : IUserValidationService
     {
         _httpClient = httpClient;
     }
-    public async Task<UserInfo?> GetUserInfoAsync(Guid userId, CancellationToken cancellationToken)
+    public async Task<UserInfo?> GetUserInfoAsync(Guid userId, CancellationToken cancellationToken)  // used by use case
     {
         var response = await _httpClient.GetAsync($"/users/{userId}", cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound)

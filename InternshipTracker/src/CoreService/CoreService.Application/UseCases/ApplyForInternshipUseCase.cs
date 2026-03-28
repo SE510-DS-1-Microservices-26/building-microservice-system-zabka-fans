@@ -34,7 +34,7 @@ public class ApplyForInternshipUseCase : IUseCase<ApplyForInternshipRequest, App
     {
         try
         {
-            var user = await _userValidationService.GetUserInfoAsync(request.UserId, cancellationToken);
+            var user = await _userValidationService.GetUserInfoAsync(request.UserId, cancellationToken); // request for user service
             if (user == null)
             {
                 return Result<ApplyForInternshipResponse>.Failure(new Error("User.NotFound",

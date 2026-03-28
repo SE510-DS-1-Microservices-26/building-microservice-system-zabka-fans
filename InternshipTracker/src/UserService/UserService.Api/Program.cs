@@ -6,7 +6,13 @@ using UserService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 var app = builder.Build();
+
+app.UseSwagger();
+
+
 
 using (var scope = app.Services.CreateScope())
 {
