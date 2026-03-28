@@ -46,7 +46,7 @@ public static class DependencyInjection
 
                 rabbit.ConfigureEndpoints(context);
             });
-
+            
             cfg.AddEntityFrameworkOutbox<UserDbContext>(outboxCfg =>
             {
                 outboxCfg.QueryDelay = TimeSpan.FromSeconds(60);
@@ -54,12 +54,6 @@ public static class DependencyInjection
                 outboxCfg.UsePostgres();
                 outboxCfg.UseBusOutbox();
             });
-
-            // cfg.AddConfigureEndpointsCallback((context, name, receiveConfigurator) =>
-            // {
-            //     receiveConfigurator.UseEntityFrameworkOutbox<UserDbContext>(context);
-            //     receiveConfigurator.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
-            // });
         });
 
         return services;

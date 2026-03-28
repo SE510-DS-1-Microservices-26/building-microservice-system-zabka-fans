@@ -1,5 +1,6 @@
 using CoreService.Application.Interfaces;
 using CoreService.Domain.Entities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace CoreService.Infrastructure.Persistence;
@@ -23,5 +24,9 @@ public class CoreDbContext : DbContext, IUnitOfWork
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreDbContext).Assembly);
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 }

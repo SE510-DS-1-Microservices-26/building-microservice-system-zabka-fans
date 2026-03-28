@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using UserService.Domain.Entities;
 
 namespace UserService.Infrastructure.Persistence;
@@ -14,5 +15,9 @@ public class UserDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(UserDbContext).Assembly);
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 }
