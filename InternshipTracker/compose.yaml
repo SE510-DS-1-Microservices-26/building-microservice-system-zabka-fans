@@ -15,7 +15,7 @@
       POSTGRES_DB: user_db
     volumes:
       - users_data:/var/lib/postgresql/data
-  user-service:
+  users:
     build:
       context: .
       dockerfile: src/UserService/UserService.Api/Dockerfile
@@ -23,28 +23,28 @@
         - user-db
     environment:
       ConnectionStrings__UsersDb: "Host=user-db;Port=5432;Database=user_db;Username=postgres;Password=Password123!"
-  core-service:
+  core:
     build:
       context: .
       dockerfile: src/CoreService/CoreService.Api/Dockerfile
     depends_on:
         - core-db
-        - user-service
+        - users
     environment:
       ConnectionStrings__CoreDb: "Host=core-db;Port=5432;Database=core_db;Username=postgres;Password=Password123!"
-      UserService__BaseUrl: "http://user-service:8080"
+      UserService__BaseUrl: "http://users:8080"
   gateway:
     build:
       context: .
       dockerfile: src/Gateway/Dockerfile
     depends_on:
-        - core-service
-        - user-service
+        - core
+        - users
     ports:
       - "8000:8080"
     environment:
-      ReverseProxy__Clusters__core__Destinations__internships-destination__Address: "http://core-service:8080"
-      ReverseProxy__Clusters__users__Destinations__users-destination__Address: "http://user-service:8080"
+      ReverseProxy__Clusters__core__Destinations__default__Address: "http://core:8080"
+      ReverseProxy__Clusters__users__Destinations__default__Address: "http://users:8080"
 
 volumes:
   core_data:
