@@ -24,9 +24,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\InternshipTracker.Application\InternshipTracker.Application.csproj"/>
-        <ProjectReference Include="..\InternshipTracker.Domain\InternshipTracker.Domain.csproj"/>
-        <ProjectReference Include="..\InternshipTracker.UI\InternshipTracker.UI.csproj"/>
+        <ProjectReference Include="..\CoreService\CoreService.Application\CoreService.Application.csproj"/>
+        <ProjectReference Include="..\CoreService\CoreService.Domain\CoreService.Domain.csproj"/>
+        <ProjectReference Include="..\CoreService\CoreService.Api\CoreService.Api.csproj"/>
     </ItemGroup>
 
 </Project>

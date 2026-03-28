@@ -1,6 +1,6 @@
+using CoreService.Application.Interfaces.Repositories;
 using CoreService.Domain.Entities;
 using CoreService.Infrastructure.Messaging.Messages;
-using CoreService.Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -10,46 +10,87 @@ namespace CoreService.Infrastructure.Messaging.Consumers;
 public class UserDbMessageConsumer : IConsumer<UserCreatedDbMessage>, IConsumer<UserDeletedDbMessage>
 {
     private readonly ILogger<UserDbMessageConsumer> _logger;
-    private readonly CoreDbContext _dbContext;
+    private readonly IUserCoreRepository _userCoreRepository;
 
-    public UserDbMessageConsumer(ILogger<UserDbMessageConsumer> logger, CoreDbContext dbContext)
+    public UserDbMessageConsumer(ILogger<UserDbMessageConsumer> logger, IUserCoreRepository userCoreRepository)
     {
         _logger = logger;
-        _dbContext = dbContext;
+        _userCoreRepository = userCoreRepository;
     }
 
     public async Task Consume(ConsumeContext<UserCreatedDbMessage> context)
     {
         var message = context.Message;
 
-        var exists = await _dbContext.Users.AnyAsync(u => u.Id == message.Id);
-        if (exists)
+        try
         {
-            _logger.LogWarning("UserCore with ID {UserId} already exists, skipping creation", message.Id);
-            return;
+            var existing = await _userCoreRepository.GetByIdAsync(message.Id, context.CancellationToken);
+            if (existing != null)
+            {
+                _logger.LogWarning("UserCore {UserId} already exists — skipping creation", message.Id);
+                return;
+            }
+
+            var user = new UserCore(message.Id, message.Name, message.Level);
+            var added = await _userCoreRepository.AddAsync(user, context.CancellationToken);
+
+            if (added == null)
+            {
+                _logger.LogError("Repository returned null after AddAsync for UserCore {UserId} — entity was not tracked", message.Id);
+                return;
+            }
+
+            await _userCoreRepository.UnitOfWork.SaveChangesAsync(context.CancellationToken);
+            _logger.LogInformation("UserCore {UserId} successfully synced to core database", message.Id);
         }
-
-        var user = new UserCore(message.Id, message.Name, message.Level);
-        await _dbContext.Users.AddAsync(user);
-        await _dbContext.SaveChangesAsync();
-
-        _logger.LogInformation("UserCore with ID {UserId} synced to core database", message.Id);
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error while persisting UserCore {UserId} — possible constraint violation", message.Id);
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Consume of UserCreatedDbMessage was cancelled for user {UserId}", message.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while consuming UserCreatedDbMessage for user {UserId}", message.Id);
+        }
     }
 
     public async Task Consume(ConsumeContext<UserDeletedDbMessage> context)
     {
         var message = context.Message;
 
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == message.UserId);
-        if (user == null)
+        try
         {
-            _logger.LogWarning("UserCore with ID {UserId} not found for deletion", message.UserId);
-            return;
+            var user = await _userCoreRepository.GetByIdAsync(message.UserId, context.CancellationToken);
+            if (user == null)
+            {
+                _logger.LogWarning("UserCore {UserId} not found for deletion — skipping", message.UserId);
+                return;
+            }
+
+            var deleted = await _userCoreRepository.DeleteAsync(user, context.CancellationToken);
+            if (!deleted)
+            {
+                _logger.LogError("Repository returned false after DeleteAsync for UserCore {UserId} — entity may have already been removed", message.UserId);
+                return;
+            }
+
+            await _userCoreRepository.UnitOfWork.SaveChangesAsync(context.CancellationToken);
+            _logger.LogInformation("UserCore {UserId} deleted from core database (applications cascade-deleted)", message.UserId);
         }
-
-        _dbContext.Users.Remove(user);
-        await _dbContext.SaveChangesAsync();
-
-        _logger.LogInformation("UserCore with ID {UserId} deleted from core database (cascade will remove applications)", message.UserId);
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error while deleting UserCore {UserId} — cascade or constraint failure", message.UserId);
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Consume of UserDeletedDbMessage was cancelled for user {UserId}", message.UserId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while consuming UserDeletedDbMessage for user {UserId}", message.UserId);
+        }
     }
 }

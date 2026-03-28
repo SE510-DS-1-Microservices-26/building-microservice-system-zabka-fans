@@ -1,7 +1,6 @@
 using CoreService.Application.DTOs;
 using CoreService.Application.DTOs.Requests;
 using CoreService.Application.DTOs.Responses;
-using CoreService.Application.Enums;
 using CoreService.Application.Interfaces;
 using CoreService.Application.Interfaces.Repositories;
 using CoreService.Domain.Entities;
@@ -21,23 +20,13 @@ public class CreateInternshipUseCase : IUseCase<CreateInternshipRequest, Interns
         CreateInternshipRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var internship = new Internship(Guid.NewGuid(), request.Title, request.Capacity, request.MinimumLevel);
+        var internship = new Internship(Guid.NewGuid(), request.Title, request.Capacity, request.MinimumLevel);
 
-            await _internshipRepository.AddAsync(internship, cancellationToken);
-            await _internshipRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+        await _internshipRepository.AddAsync(internship, cancellationToken);
+        await _internshipRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
 
-            var response = new InternshipResponse(internship.Id, internship.Title, internship.Capacity,
-                internship.MinimumLevel);
-            return Result<InternshipResponse>.Success(response);
-        }
-        catch (Exception)
-        {
-            return Result<InternshipResponse>.Failure(new Error(
-                "System.Failure",
-                "An unexpected error occurred while creating the internship.",
-                ErrorType.Failure));
-        }
+        var response = new InternshipResponse(internship.Id, internship.Title, internship.Capacity,
+            internship.MinimumLevel);
+        return Result<InternshipResponse>.Success(response);
     }
 }

@@ -49,7 +49,7 @@ public class InternshipApplicationRepository : IInternshipApplicationRepository
         CancellationToken cancellationToken = default)
     {
         return await _context.Applications
-            .Include(internshipApplication => internshipApplication.CandidateLevel)
+            .Include(internshipApplication => internshipApplication.Candidate)
             .Include(internshipApplication => internshipApplication.Internship)
             .FirstOrDefaultAsync(internshipApplication => internshipApplication.Id == id, cancellationToken);
     }

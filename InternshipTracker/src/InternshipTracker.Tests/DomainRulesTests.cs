@@ -1,8 +1,8 @@
-﻿using InternshipTracker.Domain.Entities;
-using InternshipTracker.Domain.Enums;
-using InternshipTracker.Domain.Exceptions;
-using InternshipTracker.Domain.Factories;
-using InternshipTracker.Domain.Interfaces;
+﻿using CoreService.Domain.Entities;
+using CoreService.Domain.Enums;
+using CoreService.Domain.Exceptions;
+using CoreService.Application.Factories;
+using CoreService.Domain.Interfaces;
 using NSubstitute;
 
 namespace InternshipTracker.Tests;
@@ -13,9 +13,9 @@ public class DomainTests
     public void MarkAsRejected_WhenStatusIsEnrolled_ThrowsInvalidApplicationStateException()
     {
         // Arrange
-        var candidate = new User(Guid.NewGuid(), "John Doe", CandidateLevel.Junior);
+        var candidate = new UserCore(Guid.NewGuid(), "John Doe", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Software Intern", 11, CandidateLevel.Junior);
-        var application = new InternshipApplication(Guid.NewGuid(), candidate, internship);
+        var application = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
 
         application.MarkAsAccepted();
         application.MarkAsEnrolled();
@@ -28,7 +28,7 @@ public class DomainTests
     public void Factory_RejectsUnderqualifiedCandidate()
     {
         // Arrange
-        var candidate = new User(Guid.NewGuid(), "Jane Doe", CandidateLevel.Junior);
+        var candidate = new UserCore(Guid.NewGuid(), "Jane Doe", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Senior Software Intern", 11, CandidateLevel.Senior);
 
         var duplicationChecker = Substitute.For<IDuplicateApplicationChecker>();
@@ -38,7 +38,8 @@ public class DomainTests
         var factory = new InternshipApplicationFactory(duplicationChecker);
 
         // Act & Assert
-        Assert.ThrowsAsync<UnderqualifiedException>(() => factory.CreateAsync(candidate, internship));
+        Assert.ThrowsAsync<UnderqualifiedException>(() =>
+            factory.CreateAsync(candidate.Id, candidate.Level, internship, candidate));
     }
 
     [Test]
@@ -46,8 +47,8 @@ public class DomainTests
     {
         // Arrange
         var internship = new Internship(Guid.NewGuid(), "Software Intern", 2, CandidateLevel.Junior);
-        var candidate = new User(Guid.NewGuid(), "John Doe", CandidateLevel.Junior);
-        var application = new InternshipApplication(Guid.NewGuid(), candidate, internship);
+        var candidate = new UserCore(Guid.NewGuid(), "John Doe", CandidateLevel.Junior);
+        var application = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
 
         var capacityChecker = Substitute.For<IInternshipCapacityChecker>();
         capacityChecker

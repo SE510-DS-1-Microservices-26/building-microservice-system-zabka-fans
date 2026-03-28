@@ -1,10 +1,10 @@
-﻿using InternshipTracker.Application.DTOs.Requests;
-using InternshipTracker.Application.Interfaces.Repositories;
-using InternshipTracker.Application.UseCases;
-using InternshipTracker.Domain.Entities;
-using InternshipTracker.Domain.Enums;
-using InternshipTracker.Domain.Factories;
-using InternshipTracker.Domain.Interfaces;
+﻿using CoreService.Application.DTOs.Requests;
+using CoreService.Application.Interfaces.Repositories;
+using CoreService.Application.Factories;
+using CoreService.Application.UseCases;
+using CoreService.Domain.Entities;
+using CoreService.Domain.Enums;
+using CoreService.Domain.Interfaces;
 using NSubstitute;
 
 namespace InternshipTracker.Tests;
@@ -18,11 +18,11 @@ public class ApplyForInternshipUseCaseTests
         var userId = Guid.NewGuid();
         var internshipId = Guid.NewGuid();
 
-        var user = new User(userId, "Test User", CandidateLevel.Junior);
+        var user = new UserCore(userId, "Test User", CandidateLevel.Junior);
         var internship = new Internship(internshipId, "Test Internship", 10, CandidateLevel.Junior);
 
-        var userRepo = Substitute.For<IUserRepository>();
-        userRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
+        var userCoreRepo = Substitute.For<IUserCoreRepository>();
+        userCoreRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
 
         var internshipRepo = Substitute.For<IInternshipRepository>();
         internshipRepo.GetByIdAsync(internshipId, Arg.Any<CancellationToken>()).Returns(internship);
@@ -36,7 +36,8 @@ public class ApplyForInternshipUseCaseTests
 
         var factory = new InternshipApplicationFactory(duplicationChecker);
 
-        var useCase = new ApplyForInternshipUseCase(userRepo, internshipRepo, applicationRepo, factory);
+        var useCase = new ApplyForInternshipUseCase(
+            internshipRepo, applicationRepo, factory, userCoreRepo);
 
         // Act
         var result = await useCase.ExecuteAsync(new ApplyForInternshipRequest(userId, internshipId));

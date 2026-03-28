@@ -19,26 +19,16 @@ public class GetUserByIdUseCase : IUseCase<GetUserRequest, UserResponse>
         GetUserRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
 
-            if (user == null)
-                return Result<UserResponse>.Failure(new Error(
-                    "User.NotFound",
-                    $"User with ID {request.UserId} was not found.",
-                    ErrorType.NotFound));
-
-            var response = new UserResponse(user.Id, user.Name, user.Level);
-
-            return Result<UserResponse>.Success(response);
-        }
-        catch (Exception)
-        {
+        if (user == null)
             return Result<UserResponse>.Failure(new Error(
-                "System.Failure",
-                "An unexpected error occurred while fetching the user.",
-                ErrorType.Failure));
-        }
+                "User.NotFound",
+                $"User with ID {request.UserId} was not found.",
+                ErrorType.NotFound));
+
+        var response = new UserResponse(user.Id, user.Name, user.Level);
+
+        return Result<UserResponse>.Success(response);
     }
 }

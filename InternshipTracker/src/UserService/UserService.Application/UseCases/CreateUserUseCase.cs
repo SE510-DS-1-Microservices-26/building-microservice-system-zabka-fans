@@ -1,7 +1,6 @@
 ﻿using UserService.Application.DTOs;
 using UserService.Application.DTOs.Requests;
 using UserService.Application.DTOs.Responses;
-using UserService.Application.Enums;
 using UserService.Application.Interfaces;
 using UserService.Domain.Entities;
 
@@ -20,22 +19,12 @@ public class CreateUserUseCase : IUseCase<CreateUserRequest, UserResponse>
         CreateUserRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var user = new User(Guid.NewGuid(), request.Name, request.Level);
+        var user = new User(Guid.NewGuid(), request.Name, request.Level);
 
-            await _userRepository.AddAsync(user, cancellationToken);
-            await _userRepository.SaveChangesAsync(cancellationToken);
+        await _userRepository.AddAsync(user, cancellationToken);
+        await _userRepository.SaveChangesAsync(cancellationToken);
 
-            var response = new UserResponse(user.Id, user.Name, user.Level);
-            return Result<UserResponse>.Success(response);
-        }
-        catch (Exception)
-        {
-            return Result<UserResponse>.Failure(new Error(
-                "System.Failure",
-                "An unexpected error occurred while creating the user.",
-                ErrorType.Failure));
-        }
+        var response = new UserResponse(user.Id, user.Name, user.Level);
+        return Result<UserResponse>.Success(response);
     }
 }

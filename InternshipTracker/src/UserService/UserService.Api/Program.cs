@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UserService.Api;
+using UserService.Api.Middleware;
 using UserService.Api.UserEndpoints;
 using UserService.Infrastructure;
 using UserService.Infrastructure.Persistence;
@@ -10,8 +11,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseSwagger();
-
 
 
 using (var scope = app.Services.CreateScope())

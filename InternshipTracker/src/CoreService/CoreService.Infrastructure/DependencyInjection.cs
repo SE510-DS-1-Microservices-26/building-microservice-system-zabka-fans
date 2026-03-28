@@ -6,7 +6,6 @@ using CoreService.Application.Interfaces.Repositories;
 using CoreService.Application.Services;
 using CoreService.Application.UseCases;
 using CoreService.Domain.Interfaces;
-using CoreService.Infrastructure.ExternalServices;
 using CoreService.Infrastructure.Messaging.Consumers;
 using CoreService.Infrastructure.Persistence;
 using CoreService.Infrastructure.Persistence.Repositories;
@@ -47,24 +46,16 @@ public static class DependencyInjection
             .AddScoped<IUseCase<ApplyForInternshipRequest, ApplyForInternshipResponse>, ApplyForInternshipUseCase>();
         services.AddScoped<IUseCase<ChangeApplicationStatusRequest>, ChangeApplicationStatusUseCase>();
         
-        services.AddHttpClient<IUserValidationService, HttpUserValidationService>(client =>
-        {
-            client.BaseAddress = new Uri(configuration["UsersService:BaseUrl"]!);
-            client.Timeout = TimeSpan.FromSeconds(5);
-        });
+        var rabbitHost = configuration["RabbitMQ:Host"] ?? "localhost";
         
         services.AddMassTransit(cfg =>
         {
             cfg.AddConsumer<UserDbMessageConsumer>();
             cfg.AddConsumer<UserDbMessageFaultConsumer>();
 
-            //
-            // cfg.AddConsumer<GameFaultConsumer>();
-            // cfg.AddConsumer<GenreFaultConsumer>();
-
             cfg.UsingRabbitMq((context, rabbit) =>
             {
-                rabbit.Host("localhost", "/", h =>
+                rabbit.Host(rabbitHost, "/", h =>
                 {
                     h.Username("guest");
                     h.Password("guest");

@@ -1,4 +1,5 @@
 using CoreService.Api.CoreEndpoints;
+using CoreService.Api.Middleware;
 using CoreService.Infrastructure;
 using CoreService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseSwagger();
 
 

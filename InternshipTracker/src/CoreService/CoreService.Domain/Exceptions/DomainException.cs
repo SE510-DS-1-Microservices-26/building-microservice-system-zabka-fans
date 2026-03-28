@@ -2,7 +2,10 @@ namespace CoreService.Domain.Exceptions;
 
 public class DomainException : Exception
 {
-    public DomainException(string message) : base(message)
+    public string ErrorCode { get; }
+
+    public DomainException(string errorCode, string message) : base(message)
     {
+        ErrorCode = errorCode;
     }
 }
