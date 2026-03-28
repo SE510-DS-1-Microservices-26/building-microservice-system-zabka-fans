@@ -9,6 +9,7 @@ using CoreService.Domain.Interfaces;
 using CoreService.Infrastructure.ExternalServices;
 using CoreService.Infrastructure.Persistence;
 using CoreService.Infrastructure.Persistence.Repositories;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +49,40 @@ public static class DependencyInjection
         {
             client.BaseAddress = new Uri(configuration["UsersService:BaseUrl"]!);
             client.Timeout = TimeSpan.FromSeconds(5);
+        });
+        
+        services.AddMassTransit(cfg =>
+        {
+            cfg.AddConsumer<UserDbEventConsumer>();
+            cfg.AddConsumer<UserDbEventFaultConsumer>();
+
+            //
+            // cfg.AddConsumer<GameFaultConsumer>();
+            // cfg.AddConsumer<GenreFaultConsumer>();
+
+            cfg.UsingRabbitMq((context, rabbit) =>
+            {
+                rabbit.Host("localhost", "/", h =>
+                {
+                    h.Username("guest");
+                    h.Password("guest");
+                });
+
+                rabbit.ConfigureEndpoints(context);
+            });
+
+            cfg.AddEntityFrameworkOutbox<CoreDbContext>(outboxCfg =>
+            {
+                outboxCfg.QueryDelay = TimeSpan.FromSeconds(60);
+                outboxCfg.DuplicateDetectionWindow = TimeSpan.FromSeconds(60);
+                outboxCfg.UseSqlServer();
+            });
+
+            cfg.AddConfigureEndpointsCallback((context, name, receiveConfigurator) =>
+            {
+                receiveConfigurator.UseEntityFrameworkOutbox<CoreDbContext>(context);
+                receiveConfigurator.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
+            });
         });
 
         return services;

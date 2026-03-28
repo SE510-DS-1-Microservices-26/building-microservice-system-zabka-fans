@@ -15,15 +15,27 @@
       POSTGRES_DB: user_db
     volumes:
       - users_data:/var/lib/postgresql/data
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
   users:
     build:
       context: .
       dockerfile: src/UserService/UserService.Api/Dockerfile
     depends_on:
         - user-db
+        - rabbitmq
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__UsersDb: "Host=user-db;Port=5432;Database=user_db;Username=postgres;Password=Password123!"
+      RabbitMQ__Host: "rabbitmq"
   core:
     build:
       context: .
@@ -31,10 +43,12 @@
     depends_on:
         - core-db
         - users
+        - rabbitmq
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__CoreDb: "Host=core-db;Port=5432;Database=core_db;Username=postgres;Password=Password123!"
       UserService__BaseUrl: "http://users:8080"
+      RabbitMQ__Host: "rabbitmq"
   gateway:
     build:
       context: .
@@ -52,3 +66,4 @@
 volumes:
   core_data:
   users_data:
+  rabbitmq_data:
