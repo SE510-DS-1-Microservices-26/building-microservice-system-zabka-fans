@@ -28,7 +28,8 @@ public class CreateUserUseCase : IUseCase<CreateUserRequest, UserResponse>
         var user = new User(Guid.NewGuid(), request.Name, request.Level);
 
         await _userRepository.AddAsync(user, cancellationToken);
-        
+
+        // Got to publish before calling SaveChanges
         await _publisher.PublishUserCreatedAsync(
             user.Id, user.Name, user.Level.ToString(), cancellationToken);
         

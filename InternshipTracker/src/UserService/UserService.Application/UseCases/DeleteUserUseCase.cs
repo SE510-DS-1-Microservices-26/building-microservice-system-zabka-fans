@@ -35,9 +35,8 @@ public class DeleteUserUseCase : IUseCase<DeleteUserRequest>
         }
 
         _userRepository.Delete(user);
-
-        // Publish BEFORE SaveChanges so the outbox message is included
-        // in the same transaction as the delete (EF Outbox pattern).
+        
+        // Got to publish before calling SaveChanges
         await _publisher.PublishUserDeletedAsync(user.Id, cancellationToken);
 
         await _userRepository.SaveChangesAsync(cancellationToken);
