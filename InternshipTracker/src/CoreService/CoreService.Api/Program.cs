@@ -22,6 +22,7 @@ using (var scope = app.Services.CreateScope())
 
 app.MapApplicationEndpoints();
 app.MapInternshipEndpoints();
+app.MapUserEndpoints();
 app.MapHealthEndpoints();
 app.Run();
 
