@@ -1,4 +1,5 @@
-﻿using CoreService.Application.DTOs.Requests;
+﻿using CoreService.Application.DTOs;
+using CoreService.Application.DTOs.Requests;
 using CoreService.Application.DTOs.Responses;
 using CoreService.Application.Factories;
 using CoreService.Application.Interfaces;
@@ -42,9 +43,11 @@ public static class DependencyInjection
         
         services.AddScoped<IUseCase<CreateInternshipRequest, InternshipResponse>, CreateInternshipUseCase>();
         services.AddScoped<IUseCase<GetInternshipRequest, InternshipResponse>, GetInternshipUseCase>();
+        services.AddScoped<IUseCase<GetAllInternshipsRequest, PagedResult<InternshipResponse>>, GetAllInternshipsUseCase>();
         services.AddScoped<IUseCase<GetUserRequest, UserCoreResponse>, GetUserCoreUseCase>();
         services
             .AddScoped<IUseCase<ApplyForInternshipRequest, ApplyForInternshipResponse>, ApplyForInternshipUseCase>();
+        services.AddScoped<IUseCase<GetAllApplicationsRequest, PagedResult<ApplicationResponse>>, GetAllApplicationsUseCase>();
         services.AddScoped<IUseCase<ChangeApplicationStatusRequest>, ChangeApplicationStatusUseCase>();
         
         var rabbitHost = configuration["RabbitMQ:Host"] ?? "localhost";

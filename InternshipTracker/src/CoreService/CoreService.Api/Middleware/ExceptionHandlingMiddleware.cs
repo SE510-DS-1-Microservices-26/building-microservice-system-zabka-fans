@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CoreService.Application.Exceptions;
 using CoreService.Domain.Exceptions;
 
 namespace CoreService.Api.Middleware;
@@ -19,6 +20,11 @@ public class ExceptionHandlingMiddleware
         try
         {
             await _next(context);
+        }
+        catch (ApplicationValidationException ex)
+        {
+            _logger.LogWarning(ex, "Application validation error: {ErrorCode} — {Message}", ex.ErrorCode, ex.Message);
+            await WriteProblemResponse(context, StatusCodes.Status400BadRequest, ex.ErrorCode, ex.Message);
         }
         catch (DomainException ex)
         {
@@ -53,4 +59,3 @@ public class ExceptionHandlingMiddleware
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     }
 }
-

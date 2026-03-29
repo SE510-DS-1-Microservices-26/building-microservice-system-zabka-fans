@@ -13,4 +13,7 @@ public interface IInternshipApplicationRepository
 
     Task<bool> HasStatusAsync(Guid candidateId, ApplicationStatus status,
         CancellationToken cancellationToken = default);
+
+    Task<(IReadOnlyList<InternshipApplication> Items, int TotalCount)> GetPagedWithDetailsAsync(int page, int pageSize,
+        CancellationToken cancellationToken = default);
 }

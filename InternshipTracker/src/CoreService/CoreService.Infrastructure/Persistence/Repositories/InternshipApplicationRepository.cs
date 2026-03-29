@@ -81,4 +81,22 @@ public class InternshipApplicationRepository : IInternshipApplicationRepository
                 internshipApplication => EF.Property<Guid>(internshipApplication, "CandidateId") == candidateId &&
                                          internshipApplication.Status == status, cancellationToken);
     }
+
+    public async Task<(IReadOnlyList<InternshipApplication> Items, int TotalCount)> GetPagedWithDetailsAsync(
+        int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = _context.Applications
+            .AsNoTracking()
+            .Include(a => a.Candidate)
+            .Include(a => a.Internship)
+            .OrderByDescending(a => a.Id);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
 }

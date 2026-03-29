@@ -1,4 +1,5 @@
 ﻿using CoreService.Api.Helpers;
+using CoreService.Application.DTOs;
 using CoreService.Application.DTOs.Requests;
 using CoreService.Application.DTOs.Responses;
 using CoreService.Application.Interfaces;
@@ -12,6 +13,7 @@ public static class InternshipEndpoints
     {
         var internshipGroup = app.MapGroup("/internships").WithTags("Internships");
         internshipGroup.MapGet("/{id:guid}", GetInternship);
+        internshipGroup.MapGet("/", GetAllInternships);
         internshipGroup.MapPost("/", CreateInternship);
         return app;
     }
@@ -21,6 +23,16 @@ public static class InternshipEndpoints
         [FromServices] IUseCase<GetInternshipRequest, InternshipResponse> useCase)
     {
         var result = await useCase.ExecuteAsync(new GetInternshipRequest(id));
+        return result.IsSuccess
+            ? Results.Ok(result.Value!)
+            : ResultMapper.MapError(result.Error!);
+    }
+
+    private static async Task<IResult> GetAllInternships(
+        [AsParameters] GetAllInternshipsRequest request,
+        [FromServices] IUseCase<GetAllInternshipsRequest, PagedResult<InternshipResponse>> useCase)
+    {
+        var result = await useCase.ExecuteAsync(request);
         return result.IsSuccess
             ? Results.Ok(result.Value!)
             : ResultMapper.MapError(result.Error!);

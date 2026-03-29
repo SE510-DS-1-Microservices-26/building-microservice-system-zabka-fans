@@ -1,4 +1,5 @@
 ﻿using CoreService.Api.Helpers;
+using CoreService.Application.DTOs;
 using CoreService.Application.DTOs.Requests;
 using CoreService.Application.DTOs.Responses;
 using CoreService.Application.Interfaces;
@@ -11,9 +12,20 @@ public static class ApplicationEndpoints
     public static WebApplication MapApplicationEndpoints(this WebApplication app)
     {
         var applicationGroup = app.MapGroup("/applications").WithTags("Internships");
+        applicationGroup.MapGet("/", GetAllApplications);
         applicationGroup.MapPost("/", ApplyForApplication);
         applicationGroup.MapPatch("/{id:guid}/status", ChangeApplicationStatus);
         return app;
+    }
+
+    private static async Task<IResult> GetAllApplications(
+        [AsParameters] GetAllApplicationsRequest request,
+        [FromServices] IUseCase<GetAllApplicationsRequest, PagedResult<ApplicationResponse>> useCase)
+    {
+        var result = await useCase.ExecuteAsync(request);
+        return result.IsSuccess
+            ? Results.Ok(result.Value!)
+            : ResultMapper.MapError(result.Error!);
     }
 
     private static async Task<IResult> ApplyForApplication(
