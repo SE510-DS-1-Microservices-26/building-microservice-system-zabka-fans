@@ -28,14 +28,15 @@ public class CreateUserUseCase : IUseCase<CreateUserRequest, UserResponse>
         var user = new User(Guid.NewGuid(), request.Name, request.Level);
 
         await _userRepository.AddAsync(user, cancellationToken);
-        await _userRepository.SaveChangesAsync(cancellationToken);
-
+        
         await _publisher.PublishUserCreatedAsync(
             user.Id, user.Name, user.Level.ToString(), cancellationToken);
+        
+        await _userRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("User {UserId} created: {Name}, level {Level}",
             user.Id, user.Name, user.Level);
-
+        
         var response = new UserResponse(user.Id, user.Name, user.Level);
         return Result<UserResponse>.Success(response);
     }
