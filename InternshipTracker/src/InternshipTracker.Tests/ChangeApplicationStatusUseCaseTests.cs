@@ -7,6 +7,7 @@ using CoreService.Domain.Entities;
 using CoreService.Domain.Enums;
 using CoreService.Domain.Exceptions;
 using CoreService.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 namespace InternshipTracker.Tests;
@@ -38,7 +39,9 @@ public class ChangeApplicationStatusUseCaseTests
         _appRepo.UnitOfWork.Returns(Substitute.For<IUnitOfWork>());
         _capacityChecker = Substitute.For<IInternshipCapacityChecker>();
         _capacityChecker.CountReservedSpotsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(0);
-        _useCase = new ChangeApplicationStatusUseCase(_appRepo, _capacityChecker);
+        _useCase = new ChangeApplicationStatusUseCase(
+            _appRepo, _capacityChecker,
+            Substitute.For<ILogger<ChangeApplicationStatusUseCase>>());
     }
 
     [Test]
@@ -135,4 +138,3 @@ public class ChangeApplicationStatusUseCaseTests
             _useCase.ExecuteAsync(new ChangeApplicationStatusRequest(app.Id, ApplicationStatus.Accepted)));
     }
 }
-

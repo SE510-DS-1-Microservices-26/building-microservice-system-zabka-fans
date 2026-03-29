@@ -8,6 +8,7 @@ using CoreService.Domain.Entities;
 using CoreService.Domain.Enums;
 using CoreService.Domain.Exceptions;
 using CoreService.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 namespace InternshipTracker.Tests;
@@ -35,7 +36,9 @@ public class ApplyForInternshipUseCaseTests
             .Returns(false);
 
         _factory = new InternshipApplicationFactory(_duplicationChecker);
-        _useCase = new ApplyForInternshipUseCase(_internshipRepo, _applicationRepo, _factory, _userCoreRepo);
+        _useCase = new ApplyForInternshipUseCase(
+            _internshipRepo, _applicationRepo, _factory, _userCoreRepo,
+            Substitute.For<ILogger<ApplyForInternshipUseCase>>());
     }
 
     [Test]

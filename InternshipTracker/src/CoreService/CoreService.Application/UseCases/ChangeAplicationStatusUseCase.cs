@@ -6,6 +6,7 @@ using CoreService.Application.Interfaces.Repositories;
 using CoreService.Domain.Enums;
 using CoreService.Domain.Exceptions;
 using CoreService.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace CoreService.Application.UseCases;
 
@@ -13,25 +14,34 @@ public class ChangeApplicationStatusUseCase : IUseCase<ChangeApplicationStatusRe
 {
     private readonly IInternshipApplicationRepository _appRepository;
     private readonly IInternshipCapacityChecker _capacityChecker;
+    private readonly ILogger<ChangeApplicationStatusUseCase> _logger;
 
     public ChangeApplicationStatusUseCase(IInternshipApplicationRepository appRepository,
-        IInternshipCapacityChecker capacityChecker)
+        IInternshipCapacityChecker capacityChecker,
+        ILogger<ChangeApplicationStatusUseCase> logger)
     {
         _appRepository = appRepository;
         _capacityChecker = capacityChecker;
+        _logger = logger;
     }
 
     public async Task<Result> ExecuteAsync(
         ChangeApplicationStatusRequest request,
         CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation("Changing application {ApplicationId} status to {NewStatus}",
+            request.ApplicationId, request.NewStatus);
+
         var application = await _appRepository.GetWithDetailsAsync(request.ApplicationId, cancellationToken);
 
         if (application == null)
+        {
+            _logger.LogWarning("Application {ApplicationId} not found", request.ApplicationId);
             return Result.Failure(new Error(
                 "Application.NotFound",
                 $"Application with ID {request.ApplicationId} was not found.",
                 ErrorType.NotFound));
+        }
 
         switch (request.NewStatus)
         {
@@ -74,6 +84,9 @@ public class ChangeApplicationStatusUseCase : IUseCase<ChangeApplicationStatusRe
         }
 
         await _appRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Application {ApplicationId} status changed to {NewStatus}",
+            request.ApplicationId, request.NewStatus);
 
         return Result.Success();
     }
