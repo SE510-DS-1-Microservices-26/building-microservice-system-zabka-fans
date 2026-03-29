@@ -18,6 +18,11 @@ public class UserRepository : IUserRepository
         await _context.Users.AddAsync(entity, cancellationToken);
     }
 
+    public void Delete(User user)
+    {
+        _context.Users.Remove(user);
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return _context.SaveChangesAsync(cancellationToken);

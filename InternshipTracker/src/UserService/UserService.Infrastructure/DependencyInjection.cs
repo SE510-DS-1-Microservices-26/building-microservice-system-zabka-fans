@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IUserDbMessagePublisher, UserDbMessagePublisher>();
         services.AddScoped<IUseCase<CreateUserRequest, UserResponse>, CreateUserUseCase>();
         services.AddScoped<IUseCase<GetUserRequest, UserResponse>, GetUserByIdUseCase>();
+        services.AddScoped<IUseCase<DeleteUserRequest>, DeleteUserUseCase>();
 
         var rabbitHost = configuration["RabbitMQ:Host"] ?? "localhost";
 

@@ -14,6 +14,7 @@ public static class UserEndpoints
         var userGroup = app.MapGroup("/users").WithTags("Users");
         userGroup.MapGet("/{id:guid}", GetUser);
         userGroup.MapPost("/", CreateUser);
+        userGroup.MapDelete("/{id:guid}", DeleteUser);
         return app;
     }
 
@@ -32,6 +33,16 @@ public static class UserEndpoints
         var result = await useCase.ExecuteAsync(request);
         return result.IsSuccess
             ? Results.Created($"/users/{result.Value!.Id}", result.Value)
+            : ResultMapper.MapError(result.Error!);
+    }
+
+    private static async Task<IResult> DeleteUser(
+        Guid id,
+        [FromServices] IUseCase<DeleteUserRequest> useCase)
+    {
+        var result = await useCase.ExecuteAsync(new DeleteUserRequest(id));
+        return result.IsSuccess
+            ? Results.NoContent()
             : ResultMapper.MapError(result.Error!);
     }
 }
