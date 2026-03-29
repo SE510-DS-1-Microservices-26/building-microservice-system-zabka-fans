@@ -1,4 +1,4 @@
-using Contracts.Users;
+using CoreService.Infrastructure.Messaging.Contracts;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 

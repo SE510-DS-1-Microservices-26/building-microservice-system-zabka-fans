@@ -1,7 +1,7 @@
-using Contracts.Users;
 using CoreService.Application.Interfaces.Repositories;
 using CoreService.Domain.Entities;
 using CoreService.Domain.Enums;
+using CoreService.Infrastructure.Messaging.Contracts;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
