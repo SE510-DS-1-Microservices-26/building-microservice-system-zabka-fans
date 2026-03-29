@@ -61,6 +61,7 @@ public static class DependencyInjection
                     h.Password("guest");
                 });
 
+                rabbit.UseRawJsonDeserializer(RawSerializerOptions.AnyMessageType);
                 rabbit.ConfigureEndpoints(context);
             });
 

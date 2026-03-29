@@ -44,6 +44,7 @@ public static class DependencyInjection
                     h.Password("guest");
                 });
 
+                rabbit.UseRawJsonSerializer(RawSerializerOptions.AddTransportHeaders, isDefault: true);
                 rabbit.ConfigureEndpoints(context);
             });
             
