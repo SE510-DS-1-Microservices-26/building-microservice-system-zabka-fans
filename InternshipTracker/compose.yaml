@@ -52,7 +52,7 @@
   gateway:
     build:
       context: .
-      dockerfile: src/Gateway/Dockerfile
+      dockerfile: src/GatewayService/Dockerfile
     depends_on:
         - core
         - users
