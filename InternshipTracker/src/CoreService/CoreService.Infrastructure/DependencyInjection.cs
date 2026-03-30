@@ -23,24 +23,50 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddCoreDatabase(configuration);
+        services.AddRepositories();
+        services.AddDomainServices();
+        services.AddUseCases();
+        services.AddMessaging(configuration);
+
+        return services;
+    }
+
+    private static void AddCoreDatabase(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
         services.AddDbContext<CoreDbContext>(options =>
         {
-            var connectionString = configuration.GetConnectionString("CoreDb");
+            var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
             if (string.IsNullOrEmpty(connectionString))
-                connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
+                connectionString = configuration.GetConnectionString("CoreDb");
+
+            if (string.IsNullOrEmpty(connectionString))
+                throw new InvalidOperationException(
+                    "Core DB connection string is not configured. " +
+                    "Set 'ConnectionStrings:CoreDb' in appsettings or the 'CONNECTION_STRING' environment variable.");
 
             options.UseNpgsql(connectionString);
         });
-        
+    }
+
+    private static void AddRepositories(this IServiceCollection services)
+    {
         services.AddScoped<IInternshipRepository, InternshipRepository>();
         services.AddScoped<IInternshipApplicationRepository, InternshipApplicationRepository>();
         services.AddScoped<IUserCoreRepository, UserCoreRepository>();
+    }
 
+    private static void AddDomainServices(this IServiceCollection services)
+    {
         services.AddScoped<IDuplicateApplicationChecker, DuplicateApplicationChecker>();
         services.AddScoped<IInternshipCapacityChecker, InternshipCapacityChecker>();
-
         services.AddScoped<InternshipApplicationFactory>();
-        
+    }
+
+    private static void AddUseCases(this IServiceCollection services)
+    {
         services.AddScoped<IUseCase<CreateInternshipRequest, InternshipResponse>, CreateInternshipUseCase>();
         services.AddScoped<IUseCase<GetInternshipRequest, InternshipResponse>, GetInternshipUseCase>();
         services.AddScoped<IUseCase<GetAllInternshipsRequest, PagedResult<InternshipResponse>>, GetAllInternshipsUseCase>();
@@ -49,9 +75,16 @@ public static class DependencyInjection
             .AddScoped<IUseCase<ApplyForInternshipRequest, ApplyForInternshipResponse>, ApplyForInternshipUseCase>();
         services.AddScoped<IUseCase<GetAllApplicationsRequest, PagedResult<ApplicationResponse>>, GetAllApplicationsUseCase>();
         services.AddScoped<IUseCase<ChangeApplicationStatusRequest>, ChangeApplicationStatusUseCase>();
-        
+    }
+
+    private static void AddMessaging(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
         var rabbitHost = configuration["RabbitMQ:Host"] ?? "localhost";
-        
+        var rabbitUser = configuration["RabbitMQ:Username"] ?? "guest";
+        var rabbitPass = configuration["RabbitMQ:Password"] ?? "guest";
+
         services.AddMassTransit(cfg =>
         {
             cfg.AddConsumer<UserDbMessageConsumer>();
@@ -61,8 +94,8 @@ public static class DependencyInjection
             {
                 rabbit.Host(rabbitHost, "/", h =>
                 {
-                    h.Username("guest");
-                    h.Password("guest");
+                    h.Username(rabbitUser);
+                    h.Password(rabbitPass);
                 });
 
                 rabbit.UseRawJsonDeserializer(RawSerializerOptions.AnyMessageType);
@@ -82,7 +115,5 @@ public static class DependencyInjection
                 receiveConfigurator.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
             });
         });
-
-        return services;
     }
 }

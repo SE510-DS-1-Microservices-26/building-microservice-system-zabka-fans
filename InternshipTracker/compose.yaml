@@ -18,8 +18,8 @@
   rabbitmq:
     image: rabbitmq:3-management-alpine
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -36,6 +36,8 @@
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__UsersDb: "Host=user-db;Port=5432;Database=user_db;Username=postgres;Password=Password123!"
       RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASS}
   core:
     build:
       context: .
@@ -49,6 +51,8 @@
       ConnectionStrings__CoreDb: "Host=core-db;Port=5432;Database=core_db;Username=postgres;Password=Password123!"
       UserService__BaseUrl: "http://users:8080"
       RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASS}
   gateway:
     build:
       context: .
