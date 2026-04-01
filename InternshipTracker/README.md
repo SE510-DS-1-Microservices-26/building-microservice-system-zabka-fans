@@ -17,55 +17,70 @@
 
 ## Architecture
 
+The system is decomposed into three microservices, each following Clean Architecture internally.
+
 ```
 InternshipTracker/
   src/
-    InternshipTracker.Domain/           # Entities, Value Objects, Domain Rules, Exceptions
-    InternshipTracker.Application/      # Use Cases, DTOs, Interfaces, Domain Services
-    InternshipTracker.Infrastructure/   # EF Core, Repositories, Migrations, DI
-    InternshipTracker.UI/               # Minimal API Endpoints
-    InternshipTracker.Tests/            # Unit, Application, and API tests
+    UserService/
+      UserService.Api/            # Minimal API endpoints, Exception middleware
+      UserService.Application/    # Use Cases, DTOs, Interfaces
+      UserService.Domain/         # Entities, Domain Rules, Exceptions
+      UserService.Infrastructure/ # EF Core, Repositories, MassTransit outbox, Migrations
+    CoreService/
+      CoreService.Api/            # Minimal API endpoints, Exception middleware
+      CoreService.Application/    # Use Cases, DTOs, Interfaces, Domain Services
+      CoreService.Domain/         # Entities, Domain Rules, Exceptions
+      CoreService.Infrastructure/ # EF Core, Repositories, MassTransit consumers, Migrations
+    GatewayService/               # YARP Reverse Proxy, Correlation ID middleware
+    InternshipTracker.Tests/      # Unit, Application, and API tests
 ```
 
-Dependencies flow inward: **UI -> Infrastructure -> Application -> Domain**.
+Dependencies flow inward within each service: **Api -> Infrastructure -> Application -> Domain**.
 The Domain layer has no external dependencies.
 
-## Why Modular Monolith First?
+### Services
 
-We have chosen a modular monolith over microservices because:
+**UserService** -- Owns user data. Handles user write operations (create, delete). Each mutation publishes an event to RabbitMQ via MassTransit with an EF Core transactional outbox, backed by its own `user_db` PostgreSQL database.
 
-- **Easier development** -- no need for service discovery, API gateways, or distributed tracing at this stage.
-- **Clear module boundaries** -- Clean Architecture layers enforce separation, making a future migration to
-  microservices straightforward if needed.
-- **Reduced operational complexity** -- one database, one CI pipeline, one Docker image.
+**CoreService** -- Owns internship and application data. Handles all read and write operations for internships and applications, and serves user reads from its own read-replica (`core_db`). Consumes user events from RabbitMQ (MassTransit) to keep the local user projection in sync.
 
-## How to Run Locally
+**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Injects an `X-Correlation-ID` header on every request.
+
+### Communication
+
+- **Synchronous** -- HTTP via the Gateway to each downstream service.
+- **Asynchronous** -- RabbitMQ (MassTransit) with a transactional EF Core outbox for user domain events.
+
+## How to Run with Docker
 
 ### Prerequisites
 
 - .NET 10 SDK
-- Docker (for PostgreSQL)
+- Docker
 
 ### Steps
 
-1. Start PostgreSQL:
+1. Create a `.env` file at the root of `InternshipTracker/`:
+   ```
+   POSTGRES_USER=postgres
+   POSTGRES_PASSWORD=Password123!
+   RABBITMQ_USER=guest
+   RABBITMQ_PASS=guest
+   ```
+
+2. Build and start all services:
    ```bash
    cd InternshipTracker
-   docker compose up db -d
+   docker compose up --build
    ```
 
-2. Set up user secrets (first time only):
+   The API will be available at `http://localhost:8000`.
+
+3. Stop:
    ```bash
-   cd src/InternshipTracker.UI
-   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=internship_tracker_db;Username=postgres;Password=Password123!"
+   docker compose down
    ```
-
-3. Run the application:
-   ```bash
-   dotnet run --project src/InternshipTracker.UI
-   ```
-
-   The API URL will be shown in the `dotnet run` output (for example, `http://localhost:5294` or `https://localhost:7069`).
 
 ### Run Tests
 
@@ -74,40 +89,21 @@ cd InternshipTracker
 dotnet test
 ```
 
-## How to Run with Docker
-
-1. Create a `.env` file (see `.env.example` for reference):
-   ```
-   POSTGRES_USER=postgres
-   POSTGRES_PASSWORD=Password123!
-   POSTGRES_DB=internship_tracker_db
-   ```
-
-2. Build and start:
-   ```bash
-   cd InternshipTracker
-   docker compose up --build
-   ```
-
-   The API will be available at `http://localhost:8080`.
-
-3. Stop:
-   ```bash
-   docker compose down
-   ```
-
 ## API Examples
 
-### Health Check
+All requests go through the Gateway on port `8000`.
+
+### Health Checks
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8000/core/health
+curl http://localhost:8000/users/health
 ```
 
 ### Create a User
 
 ```bash
-curl -X POST http://localhost:8080/users \
+curl -X POST http://localhost:8000/users \
   -H "Content-Type: application/json" \
   -d '{"name": "John Doe", "level": 1}'
 ```
@@ -117,13 +113,19 @@ Level values: `0` = Trainee, `1` = Junior, `2` = Middle, `3` = Senior
 ### Get a User
 
 ```bash
-curl http://localhost:8080/users/{id}
+curl http://localhost:8000/users/{id}
+```
+
+### Delete a User
+
+```bash
+curl -X DELETE http://localhost:8000/users/{id}
 ```
 
 ### Create an Internship
 
 ```bash
-curl -X POST http://localhost:8080/internships \
+curl -X POST http://localhost:8000/internships \
   -H "Content-Type: application/json" \
   -d '{"title": "Software Engineering Intern", "capacity": 10, "minimumLevel": 1}'
 ```
@@ -131,21 +133,33 @@ curl -X POST http://localhost:8080/internships \
 ### Get an Internship
 
 ```bash
-curl http://localhost:8080/internships/{id}
+curl http://localhost:8000/internships/{id}
+```
+
+### Get All Internships
+
+```bash
+curl "http://localhost:8000/internships?page=1&pageSize=10"
 ```
 
 ### Apply for an Internship
 
 ```bash
-curl -X POST http://localhost:8080/applications \
+curl -X POST http://localhost:8000/applications \
   -H "Content-Type: application/json" \
   -d '{"userId": "<user-id>", "internshipId": "<internship-id>"}'
+```
+
+### Get All Applications
+
+```bash
+curl "http://localhost:8000/applications?page=1&pageSize=10"
 ```
 
 ### Change Application Status
 
 ```bash
-curl -X PATCH http://localhost:8080/applications/{id}/status \
+curl -X PATCH http://localhost:8000/applications/{id}/status \
   -H "Content-Type: application/json" \
   -d '{"applicationId": "<id>", "newStatus": 1}'
 ```
