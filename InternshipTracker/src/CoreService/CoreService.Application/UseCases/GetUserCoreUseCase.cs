@@ -34,7 +34,7 @@ public class GetUserCoreUseCase : IUseCase<GetUserRequest, UserCoreResponse>
                 ErrorType.NotFound));
         }
 
-        var response = new UserCoreResponse(user.Id, user.Name, user.Level);
+        var response = new UserCoreResponse(user.Id, user.Name, user.Email, user.Level);
         return Result<UserCoreResponse>.Success(response);
     }
 }

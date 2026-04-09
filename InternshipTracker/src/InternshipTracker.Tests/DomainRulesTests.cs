@@ -13,7 +13,7 @@ public class DomainTests
     public void MarkAsRejected_WhenStatusIsEnrolled_ThrowsInvalidApplicationStateException()
     {
         // Arrange
-        var candidate = new UserCore(Guid.NewGuid(), "John Doe", CandidateLevel.Junior);
+        var candidate = new UserCore(Guid.NewGuid(), "John Doe", "john.doe@example.com", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Software Intern", 11, CandidateLevel.Junior);
         var application = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
 
@@ -28,7 +28,7 @@ public class DomainTests
     public void Factory_RejectsUnderqualifiedCandidate()
     {
         // Arrange
-        var candidate = new UserCore(Guid.NewGuid(), "Jane Doe", CandidateLevel.Junior);
+        var candidate = new UserCore(Guid.NewGuid(), "Jane Doe", "jane.doe@example.com", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Senior Software Intern", 11, CandidateLevel.Senior);
 
         var duplicationChecker = Substitute.For<IDuplicateApplicationChecker>();
@@ -47,7 +47,7 @@ public class DomainTests
     {
         // Arrange
         var internship = new Internship(Guid.NewGuid(), "Software Intern", 2, CandidateLevel.Junior);
-        var candidate = new UserCore(Guid.NewGuid(), "John Doe", CandidateLevel.Junior);
+        var candidate = new UserCore(Guid.NewGuid(), "John Doe", "john.doe@example.com", CandidateLevel.Junior);
         var application = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
 
         var capacityChecker = Substitute.For<IInternshipCapacityChecker>();

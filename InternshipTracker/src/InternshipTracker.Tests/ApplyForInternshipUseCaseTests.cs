@@ -48,7 +48,7 @@ public class ApplyForInternshipUseCaseTests
         var userId = Guid.NewGuid();
         var internshipId = Guid.NewGuid();
 
-        var user = new UserCore(userId, "Test User", CandidateLevel.Junior);
+        var user = new UserCore(userId, "Test User", "test.user@example.com", CandidateLevel.Junior);
         var internship = new Internship(internshipId, "Test Internship", 10, CandidateLevel.Junior);
 
         _userCoreRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
@@ -86,7 +86,7 @@ public class ApplyForInternshipUseCaseTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new UserCore(userId, "Test User", CandidateLevel.Junior);
+        var user = new UserCore(userId, "Test User", "test.user@example.com", CandidateLevel.Junior);
         _userCoreRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
         _internshipRepo.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Internship?)null);
 
@@ -104,7 +104,7 @@ public class ApplyForInternshipUseCaseTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new UserCore(userId, "Test User", CandidateLevel.Junior);
+        var user = new UserCore(userId, "Test User", "test.user@example.com", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Senior Role", 5, CandidateLevel.Senior);
 
         _userCoreRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
@@ -120,7 +120,7 @@ public class ApplyForInternshipUseCaseTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new UserCore(userId, "Test User", CandidateLevel.Junior);
+        var user = new UserCore(userId, "Test User", "test.user@example.com", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Test Internship", 10, CandidateLevel.Junior);
 
         _userCoreRepo.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns(user);

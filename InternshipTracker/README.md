@@ -105,7 +105,7 @@ curl http://localhost:8000/users/health
 ```bash
 curl -X POST http://localhost:8000/users \
   -H "Content-Type: application/json" \
-  -d '{"name": "John Doe", "level": 1}'
+  -d '{"name": "John Doe", "email": "john.doe@example.com", "level": 1}'
 ```
 
 Level values: `0` = Trainee, `1` = Junior, `2` = Middle, `3` = Senior

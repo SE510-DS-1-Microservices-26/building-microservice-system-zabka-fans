@@ -16,6 +16,10 @@ public class UserConfiguration : IEntityTypeConfiguration<UserCore>
             .IsRequired()
             .HasMaxLength(200);
 
+        builder.Property(user => user.Email)
+            .IsRequired()
+            .HasMaxLength(320);
+
         builder.Property(user => user.Level)
             .HasConversion<string>()
             .IsRequired();

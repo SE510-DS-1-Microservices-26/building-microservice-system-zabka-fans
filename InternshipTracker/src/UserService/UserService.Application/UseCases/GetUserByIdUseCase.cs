@@ -33,7 +33,7 @@ public class GetUserByIdUseCase : IUseCase<GetUserRequest, UserResponse>
                 ErrorType.NotFound));
         }
 
-        var response = new UserResponse(user.Id, user.Name, user.Level);
+        var response = new UserResponse(user.Id, user.Name, user.Email, user.Level);
 
         return Result<UserResponse>.Success(response);
     }

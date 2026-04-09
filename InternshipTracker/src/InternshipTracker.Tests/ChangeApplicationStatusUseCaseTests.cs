@@ -22,7 +22,7 @@ public class ChangeApplicationStatusUseCaseTests
         ApplicationStatus initialStatus = ApplicationStatus.Pending,
         int capacity = 10)
     {
-        var candidate = new UserCore(Guid.NewGuid(), "Test User", CandidateLevel.Junior);
+        var candidate = new UserCore(Guid.NewGuid(), "Test User", "test.user@example.com", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Test Internship", capacity, CandidateLevel.Junior);
         var app = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
 

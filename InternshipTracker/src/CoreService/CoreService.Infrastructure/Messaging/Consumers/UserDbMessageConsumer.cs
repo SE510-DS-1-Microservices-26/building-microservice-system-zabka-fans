@@ -38,7 +38,7 @@ public class UserDbMessageConsumer : IConsumer<UserCreatedEvent>, IConsumer<User
                 return;
             }
 
-            var user = new UserCore(message.Id, message.Name, level);
+            var user = new UserCore(message.Id, message.Name, message.Email, level);
             var added = await _userCoreRepository.AddAsync(user, context.CancellationToken);
 
             if (added == null)

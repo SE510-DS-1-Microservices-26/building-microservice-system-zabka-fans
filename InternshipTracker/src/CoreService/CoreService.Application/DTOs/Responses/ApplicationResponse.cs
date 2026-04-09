@@ -7,6 +7,7 @@ public record ApplicationResponse(
     Guid CandidateId,
     string CandidateName,
     CandidateLevel CandidateLevel,
+    Guid InternshipId,
     string InternshipTitle,
     ApplicationStatus Status);
 

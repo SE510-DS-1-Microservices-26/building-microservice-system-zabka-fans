@@ -16,10 +16,10 @@ public class UserDbMessagePublisher : IUserDbMessagePublisher
         _logger = logger;
     }
 
-    public async Task PublishUserCreatedAsync(Guid id, string name, string level,
+    public async Task PublishUserCreatedAsync(Guid id, string name, string email, string level,
         CancellationToken cancellationToken = default)
     {
-        await _publishEndpoint.Publish(new UserCreatedEvent(id, name, level), cancellationToken);
+        await _publishEndpoint.Publish(new UserCreatedEvent(id, name, email, level), cancellationToken);
         _logger.LogInformation("User created event with id {Id}", id);
     }
 

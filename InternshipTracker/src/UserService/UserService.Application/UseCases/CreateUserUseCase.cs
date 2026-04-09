@@ -25,20 +25,20 @@ public class CreateUserUseCase : IUseCase<CreateUserRequest, UserResponse>
         CreateUserRequest request,
         CancellationToken cancellationToken = default)
     {
-        var user = new User(Guid.NewGuid(), request.Name, request.Level);
+        var user = new User(Guid.NewGuid(), request.Name, request.Email, request.Level);
 
         await _userRepository.AddAsync(user, cancellationToken);
 
         // Got to publish before calling SaveChanges
         await _publisher.PublishUserCreatedAsync(
-            user.Id, user.Name, user.Level.ToString(), cancellationToken);
+            user.Id, user.Name, user.Email, user.Level.ToString(), cancellationToken);
         
         await _userRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("User {UserId} created: {Name}, level {Level}",
             user.Id, user.Name, user.Level);
         
-        var response = new UserResponse(user.Id, user.Name, user.Level);
+        var response = new UserResponse(user.Id, user.Name, user.Email, user.Level);
         return Result<UserResponse>.Success(response);
     }
 }

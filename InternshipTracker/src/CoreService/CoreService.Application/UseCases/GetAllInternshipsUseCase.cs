@@ -37,8 +37,8 @@ public class GetAllInternshipsUseCase : IUseCase<GetAllInternshipsRequest, Paged
         _logger.LogInformation("Retrieved page {Page} of internships ({Count}/{Total})",
             request.Page, items.Count, totalCount);
 
-        var responses = items.Select(i =>
-            new InternshipResponse(i.Id, i.Title, i.Capacity, i.MinimumLevel)).ToList();
+        var responses = items.Select(internship =>
+            new InternshipResponse(internship.Id, internship.Title, internship.Capacity, internship.MinimumLevel)).ToList();
 
         return Result<PagedResult<InternshipResponse>>.Success(
             new PagedResult<InternshipResponse>(responses, request.Page, pageSize, totalCount));

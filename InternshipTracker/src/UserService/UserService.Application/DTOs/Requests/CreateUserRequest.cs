@@ -2,4 +2,4 @@
 
 namespace UserService.Application.DTOs.Requests;
 
-public record CreateUserRequest(string Name, CandidateLevel Level);
+public record CreateUserRequest(string Name, string Email, CandidateLevel Level);

@@ -38,14 +38,15 @@ public class GetAllApplicationsUseCase : IUseCase<GetAllApplicationsRequest, Pag
         _logger.LogInformation("Retrieved page {Page} of applications ({Count}/{Total})",
             request.Page, items.Count, totalCount);
 
-        var responses = items.Select(a =>
+        var responses = items.Select(internshipApplication =>
             new ApplicationResponse(
-                a.Id,
-                a.CandidateId,
-                a.Candidate.Name,
-                a.CandidateLevel,
-                a.Internship.Title,
-                a.Status)).ToList();
+                internshipApplication.Id,
+                internshipApplication.CandidateId,
+                internshipApplication.Candidate.Name,
+                internshipApplication.CandidateLevel,
+                internshipApplication.Internship.Id,
+                internshipApplication.Internship.Title,
+                internshipApplication.Status)).ToList();
 
         return Result<PagedResult<ApplicationResponse>>.Success(
             new PagedResult<ApplicationResponse>(responses, request.Page, pageSize, totalCount));
