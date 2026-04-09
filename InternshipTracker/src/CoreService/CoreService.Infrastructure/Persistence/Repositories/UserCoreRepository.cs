@@ -36,11 +36,23 @@ public class UserCoreRepository : IUserCoreRepository
     {
         var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id, cancellationToken);
         if (existingUser == null)
-        {
             return false;
-        }
 
         _context.Users.Remove(existingUser);
         return true;
+    }
+
+    public async Task<(IReadOnlyList<UserCore> Items, int TotalCount)> GetPagedAsync(
+        int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = _context.Users.AsNoTracking().OrderBy(u => u.Name);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 }

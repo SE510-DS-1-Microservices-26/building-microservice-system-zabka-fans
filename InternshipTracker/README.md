@@ -116,6 +116,12 @@ Level values: `0` = Trainee, `1` = Junior, `2` = Middle, `3` = Senior
 curl http://localhost:8000/users/{id}
 ```
 
+### Get All Users
+
+```bash
+curl "http://localhost:8000/users?page=1&pageSize=10"
+```
+
 ### Delete a User
 
 ```bash
