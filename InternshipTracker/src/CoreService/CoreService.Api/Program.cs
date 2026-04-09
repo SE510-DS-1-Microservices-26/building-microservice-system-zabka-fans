@@ -14,8 +14,9 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseSwagger();
 
 
-using (var scope = app.Services.CreateScope())
+if (!app.Environment.IsEnvironment("Testing"))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<CoreDbContext>();
     await db.Database.MigrateAsync();
 }
