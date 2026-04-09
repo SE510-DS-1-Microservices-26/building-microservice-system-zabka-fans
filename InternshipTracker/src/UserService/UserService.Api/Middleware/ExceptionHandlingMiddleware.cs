@@ -40,8 +40,10 @@ public class ExceptionHandlingMiddleware
 
     private static int MapDomainStatusCode(string errorCode) => errorCode switch
     {
-        "User.InvalidEmail" => StatusCodes.Status422UnprocessableEntity,
-        _ => StatusCodes.Status400BadRequest
+        _ when errorCode.Contains("InvalidEmail") => StatusCodes.Status422UnprocessableEntity,
+        _ when errorCode.Contains("NotFound")     => StatusCodes.Status404NotFound,
+        _ when errorCode.Contains("Duplicate")    => StatusCodes.Status409Conflict,
+        _                                         => StatusCodes.Status400BadRequest
     };
 
     private static async Task WriteProblemResponse(
