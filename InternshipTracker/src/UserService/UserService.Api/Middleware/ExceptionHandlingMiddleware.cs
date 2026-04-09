@@ -1,4 +1,5 @@
 using System.Text.Json;
+using UserService.Domain.Exceptions;
 
 namespace UserService.Api.Middleware;
 
@@ -19,28 +20,39 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (DomainException ex)
+        {
+            _logger.LogWarning(ex, "Domain rule violated: {ErrorCode} — {Message}", ex.ErrorCode, ex.Message);
+            await WriteProblemResponse(context, MapDomainStatusCode(ex.ErrorCode), ex.ErrorCode, ex.Message);
+        }
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error on {Method} {Path}", context.Request.Method, context.Request.Path);
-
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            context.Response.ContentType = "application/json";
-
-            var body = new { code = "Validation.Failed", description = ex.Message, statusCode = 400 };
-            await context.Response.WriteAsync(JsonSerializer.Serialize(body,
-                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+            await WriteProblemResponse(context, StatusCodes.Status400BadRequest, "Validation.Failed", ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception on {Method} {Path}", context.Request.Method, context.Request.Path);
-
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "application/json";
-
-            var body = new { code = "System.Failure", description = "An unexpected error occurred.", statusCode = 500 };
-            await context.Response.WriteAsync(JsonSerializer.Serialize(body,
-                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+            await WriteProblemResponse(context, StatusCodes.Status500InternalServerError,
+                "System.Failure", "An unexpected error occurred.");
         }
+    }
+
+    private static int MapDomainStatusCode(string errorCode) => errorCode switch
+    {
+        "User.InvalidEmail" => StatusCodes.Status422UnprocessableEntity,
+        _ => StatusCodes.Status400BadRequest
+    };
+
+    private static async Task WriteProblemResponse(
+        HttpContext context, int statusCode, string code, string description)
+    {
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json";
+
+        var body = new { code, description, statusCode };
+        await context.Response.WriteAsync(JsonSerializer.Serialize(body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     }
 }
 

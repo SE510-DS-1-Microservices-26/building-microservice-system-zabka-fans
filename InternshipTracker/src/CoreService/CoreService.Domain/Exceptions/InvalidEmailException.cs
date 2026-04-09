@@ -1,4 +1,4 @@
-namespace UserService.Domain.Exceptions;
+namespace CoreService.Domain.Exceptions;
 
 public class InvalidEmailException : DomainException
 {

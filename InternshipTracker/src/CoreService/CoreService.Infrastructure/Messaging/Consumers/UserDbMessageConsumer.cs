@@ -1,6 +1,8 @@
 using CoreService.Application.Interfaces.Repositories;
 using CoreService.Domain.Entities;
 using CoreService.Domain.Enums;
+using CoreService.Domain.Exceptions;
+using CoreService.Domain.Interfaces;
 using CoreService.Infrastructure.Messaging.Contracts;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -12,11 +14,16 @@ public class UserDbMessageConsumer : IConsumer<UserCreatedEvent>, IConsumer<User
 {
     private readonly ILogger<UserDbMessageConsumer> _logger;
     private readonly IUserCoreRepository _userCoreRepository;
+    private readonly IUserCoreFactory _userCoreFactory;
 
-    public UserDbMessageConsumer(ILogger<UserDbMessageConsumer> logger, IUserCoreRepository userCoreRepository)
+    public UserDbMessageConsumer(
+        ILogger<UserDbMessageConsumer> logger,
+        IUserCoreRepository userCoreRepository,
+        IUserCoreFactory userCoreFactory)
     {
         _logger = logger;
         _userCoreRepository = userCoreRepository;
+        _userCoreFactory = userCoreFactory;
     }
 
     public async Task Consume(ConsumeContext<UserCreatedEvent> context)
@@ -38,7 +45,7 @@ public class UserDbMessageConsumer : IConsumer<UserCreatedEvent>, IConsumer<User
                 return;
             }
 
-            var user = new UserCore(message.Id, message.Name, message.Email, level);
+            var user = _userCoreFactory.Create(message.Id, message.Name, message.Email, level);
             var added = await _userCoreRepository.AddAsync(user, context.CancellationToken);
 
             if (added == null)
@@ -49,6 +56,11 @@ public class UserDbMessageConsumer : IConsumer<UserCreatedEvent>, IConsumer<User
 
             await _userCoreRepository.UnitOfWork.SaveChangesAsync(context.CancellationToken);
             _logger.LogInformation("UserCore {UserId} successfully synced to core database", message.Id);
+        }
+        catch (InvalidEmailException ex)
+        {
+            // Bad data from the event — log and skip, do not retry
+            _logger.LogError(ex, "Invalid email in UserCreatedEvent for user {UserId} — skipping message", message.Id);
         }
         catch (DbUpdateException ex)
         {

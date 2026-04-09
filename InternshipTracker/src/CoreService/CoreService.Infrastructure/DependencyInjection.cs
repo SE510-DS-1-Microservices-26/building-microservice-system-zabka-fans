@@ -6,6 +6,7 @@ using CoreService.Application.Interfaces;
 using CoreService.Application.Interfaces.Repositories;
 using CoreService.Application.Services;
 using CoreService.Application.UseCases;
+using CoreService.Domain.Factories;
 using CoreService.Domain.Interfaces;
 using CoreService.Infrastructure.Messaging.Consumers;
 using CoreService.Infrastructure.Persistence;
@@ -63,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IDuplicateApplicationChecker, DuplicateApplicationChecker>();
         services.AddScoped<IInternshipCapacityChecker, InternshipCapacityChecker>();
         services.AddScoped<InternshipApplicationFactory>();
+        services.AddSingleton<IUserCoreFactory, UserCoreFactory>();
     }
 
     private static void AddUseCases(this IServiceCollection services)

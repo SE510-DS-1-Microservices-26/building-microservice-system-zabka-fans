@@ -3,7 +3,7 @@ using UserService.Application.DTOs;
 using UserService.Application.DTOs.Requests;
 using UserService.Application.DTOs.Responses;
 using UserService.Application.Interfaces;
-using UserService.Domain.Entities;
+using UserService.Domain.Factories;
 
 namespace UserService.Application.UseCases;
 
@@ -25,7 +25,7 @@ public class CreateUserUseCase : IUseCase<CreateUserRequest, UserResponse>
         CreateUserRequest request,
         CancellationToken cancellationToken = default)
     {
-        var user = new User(Guid.NewGuid(), request.Name, request.Email, request.Level);
+        var user = UserFactory.Create(Guid.NewGuid(), request.Name, request.Email, request.Level);
 
         await _userRepository.AddAsync(user, cancellationToken);
 

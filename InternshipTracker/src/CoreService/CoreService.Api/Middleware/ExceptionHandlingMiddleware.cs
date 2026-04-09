@@ -41,6 +41,7 @@ public class ExceptionHandlingMiddleware
 
     private static int MapDomainStatusCode(string errorCode) => errorCode switch
     {
+        "User.InvalidEmail" => StatusCodes.Status422UnprocessableEntity,
         _ when errorCode.Contains("NotFound") => StatusCodes.Status404NotFound,
         _ when errorCode.Contains("Duplicate") => StatusCodes.Status409Conflict,
         _ when errorCode.Contains("AlreadyEnrolled") => StatusCodes.Status409Conflict,
