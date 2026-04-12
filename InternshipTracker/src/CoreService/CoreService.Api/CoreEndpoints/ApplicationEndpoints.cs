@@ -17,6 +17,7 @@ public static class ApplicationEndpoints
         applicationGroup.MapGet("/{id:guid}", GetApplicationById);
         applicationGroup.MapPost("/", ApplyForApplication);
         applicationGroup.MapPost("/{id:guid}/accept", AcceptApplication);
+        applicationGroup.MapPost("/{id:guid}/reject", RejectApplication);
         applicationGroup.MapPost("/{id:guid}/enroll", EnrollApplication);
         return app;
     }
@@ -53,7 +54,6 @@ public static class ApplicationEndpoints
 
     private static async Task<IResult> AcceptApplication(
         Guid id,
-        AcceptApplicationRequest request,
         [FromServices] IUseCase<ChangeApplicationStatusRequest> useCase)
     {
         var result = await useCase.ExecuteAsync(
@@ -63,9 +63,19 @@ public static class ApplicationEndpoints
             : ResultMapper.MapError(result.Error!);
     }
 
+    private static async Task<IResult> RejectApplication(
+        Guid id,
+        [FromServices] IUseCase<ChangeApplicationStatusRequest> useCase)
+    {
+        var result = await useCase.ExecuteAsync(
+            new ChangeApplicationStatusRequest(id, ApplicationStatus.Rejected));
+        return result.IsSuccess
+            ? Results.Ok()
+            : ResultMapper.MapError(result.Error!);
+    }
+
     private static async Task<IResult> EnrollApplication(
         Guid id,
-        EnrollApplicationRequest request,
         [FromServices] IUseCase<ChangeApplicationStatusRequest> useCase)
     {
         var result = await useCase.ExecuteAsync(

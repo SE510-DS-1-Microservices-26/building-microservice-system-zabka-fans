@@ -24,7 +24,7 @@ public class SendWelcomeEmailConsumer : IConsumer<SendWelcomeEmailCommand>
 
         try
         {
-            // Simulate email dispatch (log-only for now; real SendGrid integration later)
+            // Simulate email dispatch (log-only for now, real SendGrid integration later)
             await Task.Delay(300, context.CancellationToken);
 
             _logger.LogInformation(

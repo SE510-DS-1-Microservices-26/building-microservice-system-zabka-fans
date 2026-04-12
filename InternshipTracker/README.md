@@ -328,9 +328,22 @@ curl http://localhost:8000/applications/{id}
 ### Enroll an Application (triggers onboarding saga)
 
 ```bash
-curl -X POST http://localhost:8000/applications/{id}/enroll \
-  -H "Content-Type: application/json" \
-  -d '{"userId": "<user-id>"}'
+curl -X POST http://localhost:8000/applications/{id}/enroll
 ```
 
 This transitions the application from `Accepted` → `Enrolling` and kicks off the onboarding saga. The final `Enrolled` (3) or `EnrolledNotificationFault` (5) status is set asynchronously by the saga.
+
+### Accept an Application
+
+```bash
+curl -X POST http://localhost:8000/applications/{id}/accept
+```
+
+### Reject an Application
+
+```bash
+curl -X POST http://localhost:8000/applications/{id}/reject
+```
+
+Rejection is allowed from `Pending` or `Accepted` status. Applications that are `Enrolling`, `Enrolled`, or `EnrolledNotificationFault` cannot be rejected.
+

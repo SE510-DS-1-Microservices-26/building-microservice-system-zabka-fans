@@ -146,9 +146,8 @@ public class SagaSmokeTests
         }
 
         // 5. Enroll via POST endpoint — triggers the saga
-        var enrollResp = await _client.PostAsJsonAsync(
-            $"/applications/{appId}/enroll",
-            new { UserId = userId });
+        var enrollResp = await _client.PostAsync(
+            $"/applications/{appId}/enroll", null);
         Assert.That(enrollResp.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
 
         // 6. Poll until saga completes
