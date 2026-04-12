@@ -11,6 +11,7 @@ using CoreService.Domain.Interfaces;
 using CoreService.Infrastructure.Messaging.Consumers;
 using CoreService.Infrastructure.Persistence;
 using CoreService.Infrastructure.Persistence.Repositories;
+using CoreService.Infrastructure.Saga;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -92,6 +93,17 @@ public static class DependencyInjection
         {
             cfg.AddConsumer<UserDbMessageConsumer>();
             cfg.AddConsumer<UserDbMessageFaultConsumer>();
+            cfg.AddConsumer<RevertApplicationStatusConsumer>();
+            cfg.AddConsumer<FinalizeEnrollmentConsumer>();
+            cfg.AddConsumer<FaultApplicationEnrollmentConsumer>();
+
+            cfg.AddSagaStateMachine<OnboardingSagaStateMachine, OnboardingSagaState>()
+                .EntityFrameworkRepository(r =>
+                {
+                    r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+                    r.ExistingDbContext<CoreDbContext>();
+                    r.UsePostgres();
+                });
 
             cfg.UsingRabbitMq((context, rabbit) =>
             {

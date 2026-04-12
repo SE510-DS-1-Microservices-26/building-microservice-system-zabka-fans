@@ -2,8 +2,10 @@
 
 public enum ApplicationStatus
 {
-    Pending,
-    Accepted,
-    Enrolled,
-    Rejected
+    Pending = 0,
+    Accepted = 1,
+    Enrolling = 2,
+    Enrolled = 3,
+    Rejected = 4,
+    EnrolledNotificationFault = 5
 }

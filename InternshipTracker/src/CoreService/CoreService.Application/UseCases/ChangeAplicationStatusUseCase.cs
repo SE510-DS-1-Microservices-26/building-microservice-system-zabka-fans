@@ -53,7 +53,7 @@ public class ChangeApplicationStatusUseCase : IUseCase<ChangeApplicationStatusRe
                 if (application.Status != ApplicationStatus.Accepted)
                 {
                     throw new InvalidApplicationStateException(
-                        $"Cannot enroll application in status {application.Status}. Must be Accepted.");
+                        $"Cannot begin enrollment from status {application.Status}. Must be Accepted.");
                 }
 
                 var isAlreadyEnrolled = await _appRepository.HasStatusAsync(
@@ -63,7 +63,7 @@ public class ChangeApplicationStatusUseCase : IUseCase<ChangeApplicationStatusRe
                     throw new AlreadyEnrolledException(
                         $"Candidate with ID {application.CandidateId} is already enrolled in another internship.");
                 }
-                application.MarkAsEnrolled();
+                application.MarkAsEnrolling();
                 break;
 
             case ApplicationStatus.Rejected:

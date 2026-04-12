@@ -27,6 +27,7 @@ public class ChangeApplicationStatusUseCaseTests
         var app = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
 
         if (initialStatus >= ApplicationStatus.Accepted) app.MarkAsAccepted();
+        if (initialStatus >= ApplicationStatus.Enrolling) app.MarkAsEnrolling();
         if (initialStatus >= ApplicationStatus.Enrolled) app.MarkAsEnrolled();
 
         return app;
@@ -70,7 +71,7 @@ public class ChangeApplicationStatusUseCaseTests
     }
 
     [Test]
-    public async Task ChangeStatus_EnrollAccepted_Succeeds()
+    public async Task ChangeStatus_EnrollAccepted_SetsEnrollingState()
     {
         var app = CreateApplication(ApplicationStatus.Accepted);
         _appRepo.GetWithDetailsAsync(app.Id, Arg.Any<CancellationToken>()).Returns(app);
@@ -79,7 +80,7 @@ public class ChangeApplicationStatusUseCaseTests
         var result = await _useCase.ExecuteAsync(new ChangeApplicationStatusRequest(app.Id, ApplicationStatus.Enrolled));
 
         Assert.That(result.IsSuccess, Is.True);
-        Assert.That(app.Status, Is.EqualTo(ApplicationStatus.Enrolled));
+        Assert.That(app.Status, Is.EqualTo(ApplicationStatus.Enrolling));
     }
 
     [Test]

@@ -18,6 +18,7 @@ public class DomainTests
         var application = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
 
         application.MarkAsAccepted();
+        application.MarkAsEnrolling();
         application.MarkAsEnrolled();
 
         // Act & Assert
