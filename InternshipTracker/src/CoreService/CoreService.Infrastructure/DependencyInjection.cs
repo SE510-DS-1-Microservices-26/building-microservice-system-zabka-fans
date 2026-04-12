@@ -8,6 +8,7 @@ using CoreService.Application.Services;
 using CoreService.Application.UseCases;
 using CoreService.Domain.Factories;
 using CoreService.Domain.Interfaces;
+using CoreService.Infrastructure.Hosting;
 using CoreService.Infrastructure.Messaging.Consumers;
 using CoreService.Infrastructure.Persistence;
 using CoreService.Infrastructure.Persistence.Repositories;
@@ -30,6 +31,7 @@ public static class DependencyInjection
         services.AddDomainServices();
         services.AddUseCases();
         services.AddMessaging(configuration);
+        services.AddHostedService<DatabaseMigrationService>();
 
         return services;
     }

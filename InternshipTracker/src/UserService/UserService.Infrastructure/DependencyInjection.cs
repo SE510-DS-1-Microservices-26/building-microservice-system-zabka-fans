@@ -6,6 +6,7 @@ using UserService.Application.DTOs.Requests;
 using UserService.Application.DTOs.Responses;
 using UserService.Application.Interfaces;
 using UserService.Application.UseCases;
+using UserService.Infrastructure.Hosting;
 using UserService.Infrastructure.Messaging;
 using UserService.Infrastructure.Persistence;
 using UserService.Infrastructure.Persistence.Repositories;
@@ -22,6 +23,7 @@ public static class DependencyInjection
         services.AddRepositories();
         services.AddUseCases();
         services.AddMessaging(configuration);
+        services.AddHostedService<DatabaseMigrationService>();
 
         return services;
     }

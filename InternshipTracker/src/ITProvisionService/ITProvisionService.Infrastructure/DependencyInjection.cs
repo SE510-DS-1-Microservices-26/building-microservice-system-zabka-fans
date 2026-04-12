@@ -1,4 +1,5 @@
 using ITProvisionService.Infrastructure.Consumers;
+using ITProvisionService.Infrastructure.Hosting;
 using ITProvisionService.Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ public static class DependencyInjection
     {
         services.AddITProvisionDatabase(configuration);
         services.AddMessaging(configuration);
+        services.AddHostedService<DatabaseMigrationService>();
 
         return services;
     }

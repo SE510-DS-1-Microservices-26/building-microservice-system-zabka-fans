@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NotificationService.Application.Consumers;
+using NotificationService.Infrastructure.Hosting;
 using NotificationService.Infrastructure.Persistence;
 
 namespace NotificationService.Infrastructure;
@@ -15,6 +16,7 @@ public static class DependencyInjection
     {
         services.AddNotificationDatabase(configuration);
         services.AddMessaging(configuration);
+        services.AddHostedService<DatabaseMigrationService>();
 
         return services;
     }
