@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CoreService.Domain\CoreService.Domain.csproj" />
+    <ProjectReference Include="..\..\Contracts\Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -15,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MassTransit.Abstractions" Version="8.5.8" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
   </ItemGroup>
 

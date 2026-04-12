@@ -1,3 +1,4 @@
+using Contracts.Events;
 using CoreService.Application.DTOs;
 using CoreService.Application.DTOs.Requests;
 using CoreService.Application.Enums;
@@ -6,6 +7,7 @@ using CoreService.Application.Interfaces.Repositories;
 using CoreService.Domain.Enums;
 using CoreService.Domain.Exceptions;
 using CoreService.Domain.Interfaces;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace CoreService.Application.UseCases;
@@ -14,14 +16,18 @@ public class ChangeApplicationStatusUseCase : IUseCase<ChangeApplicationStatusRe
 {
     private readonly IInternshipApplicationRepository _appRepository;
     private readonly IInternshipCapacityChecker _capacityChecker;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<ChangeApplicationStatusUseCase> _logger;
 
-    public ChangeApplicationStatusUseCase(IInternshipApplicationRepository appRepository,
+    public ChangeApplicationStatusUseCase(
+        IInternshipApplicationRepository appRepository,
         IInternshipCapacityChecker capacityChecker,
+        IPublishEndpoint publishEndpoint,
         ILogger<ChangeApplicationStatusUseCase> logger)
     {
         _appRepository = appRepository;
         _capacityChecker = capacityChecker;
+        _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
 
@@ -63,8 +69,21 @@ public class ChangeApplicationStatusUseCase : IUseCase<ChangeApplicationStatusRe
                     throw new AlreadyEnrolledException(
                         $"Candidate with ID {application.CandidateId} is already enrolled in another internship.");
                 }
+
                 application.MarkAsEnrolling();
-                break;
+                await _appRepository.UnitOfWork.SaveChangesAsync(cancellationToken);
+
+                await _publishEndpoint.Publish(new OnboardingStartedEvent(
+                    application.Id,
+                    application.CandidateId,
+                    application.Candidate.Name,
+                    application.Candidate.Email), cancellationToken);
+
+                _logger.LogInformation(
+                    "Application {ApplicationId} set to Enrolling — onboarding saga started",
+                    request.ApplicationId);
+
+                return Result.Success();
 
             case ApplicationStatus.Rejected:
                 application.MarkAsRejected();

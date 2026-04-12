@@ -46,10 +46,22 @@
         - core-db
         - users
         - rabbitmq
+        - it-provision
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__CoreDb: "Host=core-db;Port=5432;Database=core_db;Username=postgres;Password=Password123!"
       UserService__BaseUrl: "http://users:8080"
+      RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASS}
+  it-provision:
+    build:
+      context: .
+      dockerfile: src/ITProvisionService/ITProvisionService.Api/Dockerfile
+    depends_on:
+        - rabbitmq
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}

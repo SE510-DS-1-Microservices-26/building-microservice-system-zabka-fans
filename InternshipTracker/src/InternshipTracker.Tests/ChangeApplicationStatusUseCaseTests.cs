@@ -7,6 +7,7 @@ using CoreService.Domain.Entities;
 using CoreService.Domain.Enums;
 using CoreService.Domain.Exceptions;
 using CoreService.Domain.Interfaces;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 
@@ -16,6 +17,7 @@ public class ChangeApplicationStatusUseCaseTests
 {
     private IInternshipApplicationRepository _appRepo = null!;
     private IInternshipCapacityChecker _capacityChecker = null!;
+    private IPublishEndpoint _publishEndpoint = null!;
     private ChangeApplicationStatusUseCase _useCase = null!;
 
     private InternshipApplication CreateApplication(
@@ -40,8 +42,9 @@ public class ChangeApplicationStatusUseCaseTests
         _appRepo.UnitOfWork.Returns(Substitute.For<IUnitOfWork>());
         _capacityChecker = Substitute.For<IInternshipCapacityChecker>();
         _capacityChecker.CountReservedSpotsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(0);
+        _publishEndpoint = Substitute.For<IPublishEndpoint>();
         _useCase = new ChangeApplicationStatusUseCase(
-            _appRepo, _capacityChecker,
+            _appRepo, _capacityChecker, _publishEndpoint,
             Substitute.For<ILogger<ChangeApplicationStatusUseCase>>());
     }
 

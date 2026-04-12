@@ -4,6 +4,7 @@ COPY ["src/CoreService/CoreService.Api/CoreService.Api.csproj", "src/CoreService
 COPY ["src/CoreService/CoreService.Application/CoreService.Application.csproj", "src/CoreService/CoreService.Application/"]
 COPY ["src/CoreService/CoreService.Domain/CoreService.Domain.csproj", "src/CoreService/CoreService.Domain/"]
 COPY ["src/CoreService/CoreService.Infrastructure/CoreService.Infrastructure.csproj","src/CoreService/CoreService.Infrastructure/"]
+COPY ["src/Contracts/Contracts.csproj", "src/Contracts/"]
 RUN dotnet restore "src/CoreService/CoreService.Api/CoreService.Api.csproj"
 COPY . .
 RUN dotnet publish "src/CoreService/CoreService.Api/CoreService.Api.csproj" -c Release -o /app/publish
