@@ -1,4 +1,5 @@
 ﻿services:
+  # ── Databases ──────────────────────────────────────────────────────────
   core-db:
     image: postgres:16-alpine
     environment:
@@ -61,13 +62,57 @@
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+
+  # ── One-shot migration services ────────────────────────────────────────
+  core-migrator:
+    build:
+      context: .
+      dockerfile: src/CoreService/CoreService.Api/Dockerfile
+    command: ["--migrate"]
+    depends_on:
+      core-db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__CoreDb: "Host=core-db;Port=5432;Database=core_db;Username=postgres;Password=Password123!"
+  user-migrator:
+    build:
+      context: .
+      dockerfile: src/UserService/UserService.Api/Dockerfile
+    command: ["--migrate"]
+    depends_on:
+      user-db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__UsersDb: "Host=user-db;Port=5432;Database=user_db;Username=postgres;Password=Password123!"
+  it-provision-migrator:
+    build:
+      context: .
+      dockerfile: src/ITProvisionService/ITProvisionService.Api/Dockerfile
+    command: ["--migrate"]
+    depends_on:
+      it-provision-db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__ITProvisionDb: "Host=it-provision-db;Port=5432;Database=it_provision_db;Username=postgres;Password=Password123!"
+  notification-migrator:
+    build:
+      context: .
+      dockerfile: src/NotificationService/NotificationService.Api/Dockerfile
+    command: ["--migrate"]
+    depends_on:
+      notification-db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__NotificationDb: "Host=notification-db;Port=5432;Database=notification_db;Username=postgres;Password=Password123!"
+
+  # ── Application services ───────────────────────────────────────────────
   users:
     build:
       context: .
       dockerfile: src/UserService/UserService.Api/Dockerfile
     depends_on:
-      user-db:
-        condition: service_healthy
+      user-migrator:
+        condition: service_completed_successfully
       rabbitmq:
         condition: service_started
     environment:
@@ -81,8 +126,8 @@
       context: .
       dockerfile: src/CoreService/CoreService.Api/Dockerfile
     depends_on:
-      core-db:
-        condition: service_healthy
+      core-migrator:
+        condition: service_completed_successfully
       users:
         condition: service_started
       rabbitmq:
@@ -103,8 +148,8 @@
       context: .
       dockerfile: src/ITProvisionService/ITProvisionService.Api/Dockerfile
     depends_on:
-      it-provision-db:
-        condition: service_healthy
+      it-provision-migrator:
+        condition: service_completed_successfully
       rabbitmq:
         condition: service_started
     environment:
@@ -118,8 +163,8 @@
       context: .
       dockerfile: src/NotificationService/NotificationService.Api/Dockerfile
     depends_on:
-      notification-db:
-        condition: service_healthy
+      notification-migrator:
+        condition: service_completed_successfully
       rabbitmq:
         condition: service_started
     environment:

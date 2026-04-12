@@ -3,6 +3,7 @@ using CoreService.Application.DTOs;
 using CoreService.Application.DTOs.Requests;
 using CoreService.Application.DTOs.Responses;
 using CoreService.Application.Interfaces;
+using CoreService.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CoreService.Api.CoreEndpoints;
@@ -11,10 +12,10 @@ public static class ApplicationEndpoints
 {
     public static WebApplication MapApplicationEndpoints(this WebApplication app)
     {
-        var applicationGroup = app.MapGroup("/applications").WithTags("Internships");
+        var applicationGroup = app.MapGroup("/applications").WithTags("Applications");
         applicationGroup.MapGet("/", GetAllApplications);
         applicationGroup.MapPost("/", ApplyForApplication);
-        applicationGroup.MapPatch("/{id:guid}/status", ChangeApplicationStatus);
+        applicationGroup.MapPost("/{id:guid}/enroll", EnrollApplication);
         return app;
     }
 
@@ -38,14 +39,15 @@ public static class ApplicationEndpoints
             : ResultMapper.MapError(result.Error!);
     }
 
-    private static async Task<IResult> ChangeApplicationStatus(
+    private static async Task<IResult> EnrollApplication(
         Guid id,
-        ChangeApplicationStatusRequest request,
+        EnrollApplicationRequest request,
         [FromServices] IUseCase<ChangeApplicationStatusRequest> useCase)
     {
-        var result = await useCase.ExecuteAsync(request with { ApplicationId = id });
+        var result = await useCase.ExecuteAsync(
+            new ChangeApplicationStatusRequest(id, ApplicationStatus.Enrolled));
         return result.IsSuccess
-            ? Results.NoContent()
+            ? Results.Accepted()
             : ResultMapper.MapError(result.Error!);
     }
 }

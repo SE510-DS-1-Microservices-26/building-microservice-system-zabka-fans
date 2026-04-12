@@ -51,7 +51,7 @@ The Domain layer has no external dependencies.
 
 ### Services
 
-**UserService** -- Owns user data. Handles user write operations (create, delete). Each mutation publishes an event to RabbitMQ via MassTransit with an EF Core transactional outbox, backed by its own `user_db` PostgreSQL database.
+**UserService** -- Owns user data. Handles user write operations (create, delete). No read endpoints — all user reads are served by CoreService from its own read-replica. Each mutation publishes an event to RabbitMQ via MassTransit with an EF Core transactional outbox, backed by its own `user_db` PostgreSQL database.
 
 **CoreService** -- Owns internship and application data. Handles all read and write operations for internships and applications, and serves user reads from its own read-replica (`core_db`). Consumes user events from RabbitMQ (MassTransit) to keep the local user projection in sync. Hosts the **Onboarding Saga** state machine and its compensation consumers.
 
@@ -242,7 +242,7 @@ cd InternshipTracker
 dotnet test
 ```
 
-Tests include saga state-machine tests (`OnboardingSagaTests`) that use the MassTransit in-memory test harness to verify every state transition and compensation path.
+Tests include saga state-machine tests (`OnboardingSagaTests`) that use the MassTransit in-memory test harness to verify every state transition and compensation path, plus an end-to-end saga smoke test (`SagaSmokeTests`) that boots CoreService against a real PostgreSQL via **Testcontainers**, wires MassTransit in-memory with mock leaf consumers, and drives the full enrollment flow through the HTTP API.
 
 ## API Examples
 
@@ -319,14 +319,12 @@ curl -X POST http://localhost:8000/applications \
 curl "http://localhost:8000/applications?page=1&pageSize=10"
 ```
 
-### Change Application Status
+### Enroll an Application (triggers onboarding saga)
 
 ```bash
-curl -X PATCH http://localhost:8000/applications/{id}/status \
+curl -X POST http://localhost:8000/applications/{id}/enroll \
   -H "Content-Type: application/json" \
-  -d '{"applicationId": "<id>", "newStatus": 1}'
+  -d '{"userId": "<user-id>"}'
 ```
 
-Status values: `0` = Pending, `1` = Accepted, `2` = Enrolled (triggers onboarding saga), `3` = Rejected
-
-> **Note:** Setting status to `Enrolled` (2) does not immediately enroll the candidate. It transitions the application to `Enrolling` and kicks off the onboarding saga. The final `Enrolled` (3) or `EnrolledNotificationFault` (5) status is set asynchronously by the saga upon completion.
+This transitions the application from `Accepted` → `Enrolling` and kicks off the onboarding saga. The final `Enrolled` (3) or `EnrolledNotificationFault` (5) status is set asynchronously by the saga.

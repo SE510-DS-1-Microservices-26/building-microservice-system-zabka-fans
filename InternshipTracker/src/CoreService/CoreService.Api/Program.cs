@@ -10,14 +10,24 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
+if (args.Contains("--migrate"))
+{
+    await MigrateAndExit(app);
+    return;
+}
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseSwagger();
 
+app.MapApplicationEndpoints();
+app.MapInternshipEndpoints();
+app.MapUserEndpoints();
+app.MapHealthEndpoints();
+app.Run();
 
-if (!app.Environment.IsEnvironment("Testing"))
+static async Task MigrateAndExit(WebApplication app)
 {
-    // Retry migration up to 5 times — the DB container may still be initialising
-    const int maxRetries = 5;
+    const int maxRetries = 10;
     for (var attempt = 1; attempt <= maxRetries; attempt++)
     {
         try
@@ -25,20 +35,17 @@ if (!app.Environment.IsEnvironment("Testing"))
             using var scope = app.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<CoreDbContext>();
             await db.Database.MigrateAsync();
-            break;
+            app.Logger.LogInformation("CoreService migrations applied successfully.");
+            return;
         }
         catch (Exception ex) when (attempt < maxRetries)
         {
-            app.Logger.LogWarning(ex, "Database migration attempt {Attempt}/{Max} failed. Retrying in 3 s…", attempt, maxRetries);
+            app.Logger.LogWarning(ex,
+                "Migration attempt {Attempt}/{Max} failed. Retrying in 3 s…",
+                attempt, maxRetries);
             await Task.Delay(TimeSpan.FromSeconds(3));
         }
     }
 }
-
-app.MapApplicationEndpoints();
-app.MapInternshipEndpoints();
-app.MapUserEndpoints();
-app.MapHealthEndpoints();
-app.Run();
 
 public partial class Program { }

@@ -12,19 +12,11 @@ public static class UserEndpoints
     public static WebApplication MapUserEndpoints(this WebApplication app)
     {
         var userGroup = app.MapGroup("/users").WithTags("Users");
-        userGroup.MapGet("/{id:guid}", GetUser);
         userGroup.MapPost("/", CreateUser);
         userGroup.MapDelete("/{id:guid}", DeleteUser);
         return app;
     }
 
-    private static async Task<IResult> GetUser(Guid id, [FromServices] IUseCase<GetUserRequest, UserResponse> useCase)
-    {
-        var result = await useCase.ExecuteAsync(new GetUserRequest(id));
-        return result.IsSuccess
-            ? Results.Ok(result.Value!)
-            : ResultMapper.MapError(result.Error!);
-    }
 
     private static async Task<IResult> CreateUser(
         CreateUserRequest request,
