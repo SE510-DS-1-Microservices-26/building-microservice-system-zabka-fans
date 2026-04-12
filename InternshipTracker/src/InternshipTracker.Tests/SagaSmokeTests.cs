@@ -91,6 +91,7 @@ public class SagaSmokeTests
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CoreDbContext>();
+        await db.Database.EnsureDeletedAsync();
         await db.Database.MigrateAsync();
     }
 

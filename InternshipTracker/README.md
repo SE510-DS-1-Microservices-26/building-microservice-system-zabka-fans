@@ -319,6 +319,12 @@ curl -X POST http://localhost:8000/applications \
 curl "http://localhost:8000/applications?page=1&pageSize=10"
 ```
 
+### Get an Application
+
+```bash
+curl http://localhost:8000/applications/{id}
+```
+
 ### Enroll an Application (triggers onboarding saga)
 
 ```bash

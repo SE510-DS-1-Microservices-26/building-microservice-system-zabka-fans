@@ -14,10 +14,21 @@ public static class ApplicationEndpoints
     {
         var applicationGroup = app.MapGroup("/applications").WithTags("Applications");
         applicationGroup.MapGet("/", GetAllApplications);
+        applicationGroup.MapGet("/{id:guid}", GetApplicationById);
         applicationGroup.MapPost("/", ApplyForApplication);
         applicationGroup.MapPost("/{id:guid}/accept", AcceptApplication);
         applicationGroup.MapPost("/{id:guid}/enroll", EnrollApplication);
         return app;
+    }
+
+    private static async Task<IResult> GetApplicationById(
+        Guid id,
+        [FromServices] IUseCase<GetApplicationRequest, ApplicationResponse> useCase)
+    {
+        var result = await useCase.ExecuteAsync(new GetApplicationRequest(id));
+        return result.IsSuccess
+            ? Results.Ok(result.Value!)
+            : ResultMapper.MapError(result.Error!);
     }
 
     private static async Task<IResult> GetAllApplications(

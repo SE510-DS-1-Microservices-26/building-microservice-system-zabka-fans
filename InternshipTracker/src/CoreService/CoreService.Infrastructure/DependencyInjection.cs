@@ -80,6 +80,7 @@ public static class DependencyInjection
         services
             .AddScoped<IUseCase<ApplyForInternshipRequest, ApplyForInternshipResponse>, ApplyForInternshipUseCase>();
         services.AddScoped<IUseCase<GetAllApplicationsRequest, PagedResult<ApplicationResponse>>, GetAllApplicationsUseCase>();
+        services.AddScoped<IUseCase<GetApplicationRequest, ApplicationResponse>, GetApplicationByIdUseCase>();
         services.AddScoped<IUseCase<ChangeApplicationStatusRequest>, ChangeApplicationStatusUseCase>();
     }
 
