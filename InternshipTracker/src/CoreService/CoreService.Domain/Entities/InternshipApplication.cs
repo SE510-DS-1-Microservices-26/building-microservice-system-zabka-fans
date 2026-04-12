@@ -29,7 +29,7 @@ public class InternshipApplication
         Status = ApplicationStatus.Accepted;
     }
 
-    /// <summary>Accepted → Enrolling (saga lock)</summary>
+    /// <summary>Transitions the application to Enrolling, locking it while the onboarding saga runs.</summary>
     public void MarkAsEnrolling()
     {
         if (Status != ApplicationStatus.Accepted)
@@ -39,7 +39,7 @@ public class InternshipApplication
         Status = ApplicationStatus.Enrolling;
     }
 
-    /// <summary>Enrolling → Enrolled (saga finalize)</summary>
+    /// <summary>Marks the application as fully enrolled once the saga completes successfully.</summary>
     public void MarkAsEnrolled()
     {
         if (Status != ApplicationStatus.Enrolling)
@@ -49,7 +49,7 @@ public class InternshipApplication
         Status = ApplicationStatus.Enrolled;
     }
 
-    /// <summary>Enrolling → Accepted (saga compensation)</summary>
+    /// <summary>Reverts the application back to Accepted when the saga needs to compensate a failed step.</summary>
     public void RevertToAccepted()
     {
         if (Status != ApplicationStatus.Enrolling)
@@ -59,7 +59,7 @@ public class InternshipApplication
         Status = ApplicationStatus.Accepted;
     }
 
-    /// <summary>Enrolling → EnrolledNotificationFault (notification failed, IT account is valid)</summary>
+    /// <summary>Records a partial fault: the IT account was created but the welcome email could not be sent.</summary>
     public void MarkAsEnrolledNotificationFault()
     {
         if (Status != ApplicationStatus.Enrolling)

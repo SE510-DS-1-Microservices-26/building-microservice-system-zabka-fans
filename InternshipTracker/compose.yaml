@@ -1,5 +1,5 @@
 ﻿services:
-  # ── Databases ──────────────────────────────────────────────────────────
+  # databases
   core-db:
     image: postgres:16-alpine
     environment:
@@ -64,7 +64,7 @@
       - rabbitmq_data:/var/lib/rabbitmq
 
 
-  # ── Application services ───────────────────────────────────────────────
+  # application services
   users:
     build:
       context: .

@@ -7,14 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace InternshipTracker.Tests;
 
-/// <summary>
-/// Tests the <see cref="OnboardingSagaStateMachine"/> using the MassTransit in-memory test harness.
-/// Verifies every state transition and the commands published at each phase.
-/// </summary>
 public class OnboardingSagaTests : IAsyncDisposable
 {
-    // ── Shared constants (no magic values) ──────────────────────────────────
-
     private static readonly Guid ApplicationId = Guid.NewGuid();
     private static readonly Guid CandidateId = Guid.NewGuid();
     private const string CandidateName = "Alice Smith";
@@ -22,8 +16,6 @@ public class OnboardingSagaTests : IAsyncDisposable
     private const string CorporateEmail = "alice.smith@corp.internship.com";
     private const string ProvisioningFailureReason = "Username already exists";
     private const string EmailFailureReason = "SendGrid API unavailable";
-
-    // ── Harness ─────────────────────────────────────────────────────────────
 
     private ServiceProvider _provider = null!;
     private ITestHarness _harness = null!;
@@ -58,8 +50,6 @@ public class OnboardingSagaTests : IAsyncDisposable
         await _provider.DisposeAsync();
     }
 
-    // ── Helper ──────────────────────────────────────────────────────────────
-
     private static OnboardingStartedEvent CreateOnboardingStartedEvent() =>
         new(ApplicationId, CandidateId, CandidateName, CandidateEmail);
 
@@ -76,7 +66,7 @@ public class OnboardingSagaTests : IAsyncDisposable
         Assert.That(await _sagaHarness.Exists(ApplicationId, s => s.SendingNotification), Is.Not.Null);
     }
 
-    // ── Phase 1: Initiation → ProvisioningIT ────────────────────────────────
+    // OnboardingStarted
 
     [Test]
     public async Task OnboardingStarted_TransitionsToProvisioningIT()
@@ -113,7 +103,7 @@ public class OnboardingSagaTests : IAsyncDisposable
                  && x.Context.Message.CandidateEmail == CandidateEmail), Is.True);
     }
 
-    // ── Phase 2a: IT Success → SendingNotification ──────────────────────────
+    // AccountProvisioned
 
     [Test]
     public async Task AccountProvisioned_TransitionsToSendingNotification()
@@ -144,7 +134,7 @@ public class OnboardingSagaTests : IAsyncDisposable
                  && x.Context.Message.CorporateEmail == CorporateEmail), Is.True);
     }
 
-    // ── Phase 2b: IT Failure → Faulted (compensation) ──────────────────────
+    // AccountProvisioningFailed
 
     [Test]
     public async Task AccountProvisioningFailed_TransitionsToFaulted()
@@ -179,7 +169,7 @@ public class OnboardingSagaTests : IAsyncDisposable
             x => x.Context.Message.ApplicationId == ApplicationId), Is.True);
     }
 
-    // ── Phase 3a: Email Success → Completed ─────────────────────────────────
+    // EmailSent
 
     [Test]
     public async Task EmailSent_FinalizesSaga_SagaInstanceRemoved()
@@ -188,11 +178,10 @@ public class OnboardingSagaTests : IAsyncDisposable
 
         await _harness.Bus.Publish(new EmailSentEvent(ApplicationId));
 
-        // Verify finalize command was published — proves the saga reached the Completed branch.
         Assert.That(await _harness.Published.Any<FinalizeEnrollmentCommand>(
             x => x.Context.Message.ApplicationId == ApplicationId), Is.True);
 
-        // After SetCompletedWhenFinalized the saga is removed from the in-memory repo.
+        // saga is removed from the repository after finalization
         var remaining = _sagaHarness.Sagas.ContainsInState(
             ApplicationId, _sagaHarness.StateMachine, s => s.ProvisioningIT);
         Assert.That(remaining, Is.Null, "Saga should no longer be in any active state");
@@ -208,7 +197,7 @@ public class OnboardingSagaTests : IAsyncDisposable
             x => x.Context.Message.ApplicationId == ApplicationId), Is.True);
     }
 
-    // ── Phase 3b: Email Failure → Faulted ───────────────────────────────────
+    // EmailSendingFailed
 
     [Test]
     public async Task EmailSendingFailed_TransitionsToFaulted()
@@ -244,6 +233,3 @@ public class OnboardingSagaTests : IAsyncDisposable
                  && x.Context.Message.Reason == EmailFailureReason), Is.True);
     }
 }
-
-
-

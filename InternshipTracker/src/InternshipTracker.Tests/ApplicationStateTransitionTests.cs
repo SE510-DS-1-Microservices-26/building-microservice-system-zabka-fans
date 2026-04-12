@@ -4,14 +4,8 @@ using CoreService.Domain.Exceptions;
 
 namespace InternshipTracker.Tests;
 
-/// <summary>
-/// Tests every legal and illegal state transition on <see cref="InternshipApplication"/>,
-/// covering the full saga lifecycle: Pending → Accepted → Enrolling → Enrolled / compensation paths.
-/// </summary>
 public class ApplicationStateTransitionTests
 {
-    // ── Shared fixture builder ──────────────────────────────────────────────
-
     private const string DefaultCandidateName = "Test Candidate";
     private const string DefaultCandidateEmail = "candidate@example.com";
     private const string DefaultInternshipTitle = "Test Internship";
@@ -31,8 +25,6 @@ public class ApplicationStateTransitionTests
         return app;
     }
 
-    // ── Constructor ─────────────────────────────────────────────────────────
-
     [Test]
     public void NewApplication_HasPendingStatus()
     {
@@ -40,8 +32,6 @@ public class ApplicationStateTransitionTests
 
         Assert.That(app.Status, Is.EqualTo(ApplicationStatus.Pending));
     }
-
-    // ── MarkAsAccepted ──────────────────────────────────────────────────────
 
     [Test]
     public void MarkAsAccepted_FromPending_Succeeds()
@@ -52,8 +42,6 @@ public class ApplicationStateTransitionTests
 
         Assert.That(app.Status, Is.EqualTo(ApplicationStatus.Accepted));
     }
-
-    // ── MarkAsEnrolling ─────────────────────────────────────────────────────
 
     [Test]
     public void MarkAsEnrolling_FromAccepted_Succeeds()
@@ -75,8 +63,6 @@ public class ApplicationStateTransitionTests
         Assert.Throws<InvalidApplicationStateException>(() => app.MarkAsEnrolling());
     }
 
-    // ── MarkAsEnrolled (saga finalize) ──────────────────────────────────────
-
     [Test]
     public void MarkAsEnrolled_FromEnrolling_Succeeds()
     {
@@ -96,8 +82,6 @@ public class ApplicationStateTransitionTests
 
         Assert.Throws<InvalidApplicationStateException>(() => app.MarkAsEnrolled());
     }
-
-    // ── RevertToAccepted (saga compensation) ────────────────────────────────
 
     [Test]
     public void RevertToAccepted_FromEnrolling_Succeeds()
@@ -119,8 +103,6 @@ public class ApplicationStateTransitionTests
         Assert.Throws<InvalidApplicationStateException>(() => app.RevertToAccepted());
     }
 
-    // ── MarkAsEnrolledNotificationFault (saga notification failure) ─────────
-
     [Test]
     public void MarkAsEnrolledNotificationFault_FromEnrolling_Succeeds()
     {
@@ -141,8 +123,6 @@ public class ApplicationStateTransitionTests
 
         Assert.Throws<InvalidApplicationStateException>(() => app.MarkAsEnrolledNotificationFault());
     }
-
-    // ── MarkAsRejected ──────────────────────────────────────────────────────
 
     [TestCase(ApplicationStatus.Pending)]
     [TestCase(ApplicationStatus.Accepted)]
@@ -167,8 +147,7 @@ public class ApplicationStateTransitionTests
     [Test]
     public void MarkAsRejected_FromEnrolledNotificationFault_ThrowsInvalidApplicationState()
     {
-        // EnrolledNotificationFault can't be built via the helper (it's not on the linear path),
-        // so we build it manually: Accepted → Enrolling → MarkAsEnrolledNotificationFault
+        // EnrolledNotificationFault is off the linear path, so build it manually
         var candidate = new UserCore(Guid.NewGuid(), DefaultCandidateName, DefaultCandidateEmail, DefaultLevel);
         var internship = new Internship(Guid.NewGuid(), DefaultInternshipTitle, DefaultCapacity, DefaultLevel);
         var app = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
@@ -178,8 +157,6 @@ public class ApplicationStateTransitionTests
 
         Assert.Throws<InvalidApplicationStateException>(() => app.MarkAsRejected());
     }
-
-    // ── Full happy path ─────────────────────────────────────────────────────
 
     [Test]
     public void FullHappyPath_PendingToEnrolled_AllTransitionsSucceed()
@@ -196,8 +173,6 @@ public class ApplicationStateTransitionTests
         Assert.That(app.Status, Is.EqualTo(ApplicationStatus.Enrolled));
     }
 
-    // ── Full compensation path ──────────────────────────────────────────────
-
     [Test]
     public void CompensationPath_EnrollingRevertedToAccepted_ThenRejectableAgain()
     {
@@ -206,9 +181,8 @@ public class ApplicationStateTransitionTests
         app.RevertToAccepted();
         Assert.That(app.Status, Is.EqualTo(ApplicationStatus.Accepted));
 
-        // After compensation, the application is unlocked and can be rejected
+        // after compensation the application is unlocked and can be rejected
         app.MarkAsRejected();
         Assert.That(app.Status, Is.EqualTo(ApplicationStatus.Rejected));
     }
 }
-

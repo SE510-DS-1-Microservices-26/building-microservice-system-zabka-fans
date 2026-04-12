@@ -39,7 +39,7 @@ public class SagaSmokeTests
                 builder.UseEnvironment("Testing");
                 builder.ConfigureServices(services =>
                 {
-                    // Remove ALL CoreDbContext-related registrations (options + internal configs)
+                    // swap out the production DbContext for the test container connection
                     var dbRelated = services
                         .Where(d =>
                         {
@@ -56,7 +56,7 @@ public class SagaSmokeTests
                     services.AddDbContext<CoreDbContext>(opts =>
                         opts.UseNpgsql(_postgres.GetConnectionString()));
 
-                    // Remove all MassTransit registrations from the production DI
+                    // replace production MassTransit with the in-memory test harness
                     var mtDescriptors = services
                         .Where(d => d.ServiceType.FullName?.Contains("MassTransit") == true
                                     || d.ImplementationType?.FullName?.Contains("MassTransit") == true)
@@ -65,11 +65,11 @@ public class SagaSmokeTests
 
                     var hostedServices = services
                         .Where(d => d.ServiceType == typeof(IHostedService)
-                                    && d.ImplementationType?.Namespace?.Contains("MassTransit") == true)
+                                    && (d.ImplementationType?.Namespace?.Contains("MassTransit") == true
+                                        || d.ImplementationType == typeof(CoreService.Infrastructure.Hosting.DatabaseMigrationService)))
                         .ToList();
                     foreach (var d in hostedServices) services.Remove(d);
 
-                    // Re-register MassTransit with in-memory transport, saga, and mock leaf consumers
                     services.AddMassTransitTestHarness(cfg =>
                     {
                         cfg.AddSagaStateMachine<

@@ -6,13 +6,11 @@ namespace CoreService.Infrastructure.Saga;
 
 public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSagaState>
 {
-    // ── States ──
     public State ProvisioningIT { get; private set; } = default!;
     public State SendingNotification { get; private set; } = default!;
     public State Completed { get; private set; } = default!;
     public State Faulted { get; private set; } = default!;
 
-    // ── Events ──
     public Event<OnboardingStartedEvent> OnboardingStarted { get; private set; } = default!;
     public Event<AccountProvisionedEvent> AccountProvisioned { get; private set; } = default!;
     public Event<AccountProvisioningFailedEvent> AccountProvisioningFailed { get; private set; } = default!;
@@ -23,14 +21,12 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
     {
         InstanceState(x => x.CurrentState);
 
-        // ── Correlation ──
         Event(() => OnboardingStarted, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
         Event(() => AccountProvisioned, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
         Event(() => AccountProvisioningFailed, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
         Event(() => EmailSent, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
         Event(() => EmailSendingFailed, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
 
-        // ── Phase 1: Initiation → IT Provisioning ──
         Initially(
             When(OnboardingStarted)
                 .Then(ctx =>
@@ -49,9 +45,7 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
                 .TransitionTo(ProvisioningIT)
         );
 
-        // ── Phase 2: IT Provisioning result ──
         During(ProvisioningIT,
-            // 2a — Success → send welcome email
             When(AccountProvisioned)
                 .Then(ctx =>
                 {
@@ -64,7 +58,6 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
                     ctx.Saga.CorporateEmail!))
                 .TransitionTo(SendingNotification),
 
-            // 2b — Failure → compensate
             When(AccountProvisioningFailed)
                 .Then(ctx =>
                 {
@@ -75,16 +68,14 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
                 .TransitionTo(Faulted)
         );
 
-        // ── Phase 3: Notification result ──
         During(SendingNotification,
-            // 3a — Success → finalize enrollment
             When(EmailSent)
                 .Then(ctx => ctx.Saga.UpdatedAt = DateTime.UtcNow)
                 .Publish(ctx => new FinalizeEnrollmentCommand(ctx.Saga.CorrelationId))
                 .TransitionTo(Completed)
                 .Finalize(),
 
-            // 3b — Failure → fault (IT account stays, only email failed)
+            // IT account was already created, so we can't fully roll back — record the fault
             When(EmailSendingFailed)
                 .Then(ctx =>
                 {
@@ -100,4 +91,3 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
         SetCompletedWhenFinalized();
     }
 }
-
