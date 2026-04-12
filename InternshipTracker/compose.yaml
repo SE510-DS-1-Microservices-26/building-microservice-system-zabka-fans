@@ -47,6 +47,7 @@
         - users
         - rabbitmq
         - it-provision
+        - notification
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__CoreDb: "Host=core-db;Port=5432;Database=core_db;Username=postgres;Password=Password123!"
@@ -65,6 +66,17 @@
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
+  notification:
+    build:
+      context: .
+      dockerfile: src/NotificationService/NotificationService.Api/Dockerfile
+    depends_on:
+        - rabbitmq
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASS}
   gateway:
     build:
       context: .
@@ -72,12 +84,16 @@
     depends_on:
         - core
         - users
+        - it-provision
+        - notification
     ports:
       - "8000:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ReverseProxy__Clusters__core__Destinations__default__Address: "http://core:8080"
       ReverseProxy__Clusters__users__Destinations__default__Address: "http://users:8080"
+      ReverseProxy__Clusters__it-provision__Destinations__default__Address: "http://it-provision:8080"
+      ReverseProxy__Clusters__notification__Destinations__default__Address: "http://notification:8080"
 
 volumes:
   core_data:
