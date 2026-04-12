@@ -15,6 +15,7 @@ public static class ApplicationEndpoints
         var applicationGroup = app.MapGroup("/applications").WithTags("Applications");
         applicationGroup.MapGet("/", GetAllApplications);
         applicationGroup.MapPost("/", ApplyForApplication);
+        applicationGroup.MapPost("/{id:guid}/accept", AcceptApplication);
         applicationGroup.MapPost("/{id:guid}/enroll", EnrollApplication);
         return app;
     }
@@ -36,6 +37,18 @@ public static class ApplicationEndpoints
         var result = await useCase.ExecuteAsync(request);
         return result.IsSuccess
             ? Results.Created($"/applications/{result.Value!.ApplicationId}", result.Value)
+            : ResultMapper.MapError(result.Error!);
+    }
+
+    private static async Task<IResult> AcceptApplication(
+        Guid id,
+        AcceptApplicationRequest request,
+        [FromServices] IUseCase<ChangeApplicationStatusRequest> useCase)
+    {
+        var result = await useCase.ExecuteAsync(
+            new ChangeApplicationStatusRequest(id, ApplicationStatus.Accepted));
+        return result.IsSuccess
+            ? Results.Ok()
             : ResultMapper.MapError(result.Error!);
     }
 
