@@ -5,6 +5,11 @@
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: core_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - core_data:/var/lib/postgresql/data
   user-db:
@@ -13,6 +18,11 @@
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: user_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - users_data:/var/lib/postgresql/data
   it-provision-db:
@@ -56,8 +66,10 @@
       context: .
       dockerfile: src/UserService/UserService.Api/Dockerfile
     depends_on:
-        - user-db
-        - rabbitmq
+      user-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__UsersDb: "Host=user-db;Port=5432;Database=user_db;Username=postgres;Password=Password123!"
@@ -69,11 +81,16 @@
       context: .
       dockerfile: src/CoreService/CoreService.Api/Dockerfile
     depends_on:
-        - core-db
-        - users
-        - rabbitmq
-        - it-provision
-        - notification
+      core-db:
+        condition: service_healthy
+      users:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      it-provision:
+        condition: service_started
+      notification:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__CoreDb: "Host=core-db;Port=5432;Database=core_db;Username=postgres;Password=Password123!"
