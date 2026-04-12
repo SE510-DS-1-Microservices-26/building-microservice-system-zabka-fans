@@ -1,38 +1,38 @@
-using ITProvisionService.Infrastructure.Consumers;
-using ITProvisionService.Infrastructure.Persistence;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NotificationService.Application.Consumers;
+using NotificationService.Infrastructure.Persistence;
 
-namespace ITProvisionService.Infrastructure;
+namespace NotificationService.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddITProvisionInfrastructure(
+    public static IServiceCollection AddNotificationInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddITProvisionDatabase(configuration);
+        services.AddNotificationDatabase(configuration);
         services.AddMessaging(configuration);
 
         return services;
     }
 
-    private static void AddITProvisionDatabase(
+    private static void AddNotificationDatabase(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddDbContext<ITProvisionDbContext>(options =>
+        services.AddDbContext<NotificationDbContext>(options =>
         {
-            var connectionString = configuration.GetConnectionString("ITProvisionDb");
+            var connectionString = configuration.GetConnectionString("NotificationDb");
             if (string.IsNullOrEmpty(connectionString))
                 connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
 
             if (string.IsNullOrEmpty(connectionString))
                 throw new InvalidOperationException(
-                    "IT Provision DB connection string is not configured. " +
-                    "Set 'ConnectionStrings:ITProvisionDb' in appsettings or the 'CONNECTION_STRING' environment variable.");
+                    "Notification DB connection string is not configured. " +
+                    "Set 'ConnectionStrings:NotificationDb' in appsettings or the 'CONNECTION_STRING' environment variable.");
 
             options.UseNpgsql(connectionString);
         });
@@ -48,7 +48,7 @@ public static class DependencyInjection
 
         services.AddMassTransit(cfg =>
         {
-            cfg.AddConsumer<ProvisionCorporateAccountConsumer>();
+            cfg.AddConsumer<SendWelcomeEmailConsumer>();
 
             cfg.UsingRabbitMq((context, rabbit) =>
             {
@@ -61,7 +61,7 @@ public static class DependencyInjection
                 rabbit.ConfigureEndpoints(context);
             });
 
-            cfg.AddEntityFrameworkOutbox<ITProvisionDbContext>(outboxCfg =>
+            cfg.AddEntityFrameworkOutbox<NotificationDbContext>(outboxCfg =>
             {
                 outboxCfg.QueryDelay = TimeSpan.FromSeconds(60);
                 outboxCfg.DuplicateDetectionWindow = TimeSpan.FromSeconds(60);
@@ -70,7 +70,7 @@ public static class DependencyInjection
 
             cfg.AddConfigureEndpointsCallback((context, name, receiveConfigurator) =>
             {
-                receiveConfigurator.UseEntityFrameworkOutbox<ITProvisionDbContext>(context);
+                receiveConfigurator.UseEntityFrameworkOutbox<NotificationDbContext>(context);
                 receiveConfigurator.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
             });
         });

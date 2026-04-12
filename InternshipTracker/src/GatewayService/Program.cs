@@ -7,6 +7,8 @@ app.UseSwaggerUI(options =>
     // The Gateway UI will fetch the JSON from these YARP routes
     options.SwaggerEndpoint("/core/swagger/v1/swagger.json", "Core Service API");
     options.SwaggerEndpoint("/users/swagger/v1/swagger.json", "User Service API");
+    options.SwaggerEndpoint("/it-provision/swagger/v1/swagger.json", "IT Provision Service API");
+    options.SwaggerEndpoint("/notification/swagger/v1/swagger.json", "Notification Service API");
     
     // Serve the Swagger UI at the application root (http://localhost:8000/)
     options.RoutePrefix = "swagger";

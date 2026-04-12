@@ -34,13 +34,14 @@ InternshipTracker/
       CoreService.Domain/         # Entities, Domain Rules, Exceptions
       CoreService.Infrastructure/ # EF Core, Repositories, MassTransit consumers, Saga, Migrations
     ITProvisionService/
-      ITProvisionService.Api/     # Minimal API, health endpoint
+      ITProvisionService.Api/     # Minimal API, health endpoint, Swagger
       ITProvisionService.Application/
       ITProvisionService.Domain/
-      ITProvisionService.Infrastructure/ # ProvisionCorporateAccountConsumer
+      ITProvisionService.Infrastructure/ # ProvisionCorporateAccountConsumer, EF Core outbox, Migrations
     NotificationService/
-      NotificationService.Api/    # Minimal API, health endpoint
+      NotificationService.Api/    # Minimal API, health endpoint, Swagger
       NotificationService.Application/  # SendWelcomeEmailConsumer
+      NotificationService.Infrastructure/ # EF Core outbox, Migrations
     GatewayService/               # YARP Reverse Proxy, Correlation ID middleware
     InternshipTracker.Tests/      # Unit, Application, Saga, and API tests
 ```
@@ -54,18 +55,45 @@ The Domain layer has no external dependencies.
 
 **CoreService** -- Owns internship and application data. Handles all read and write operations for internships and applications, and serves user reads from its own read-replica (`core_db`). Consumes user events from RabbitMQ (MassTransit) to keep the local user projection in sync. Hosts the **Onboarding Saga** state machine and its compensation consumers.
 
-**ITProvisionService** -- Stateless leaf service. Consumes `ProvisionCorporateAccountCommand` from the saga, simulates creating a corporate email account, and replies with `AccountProvisionedEvent` or `AccountProvisioningFailedEvent`.
+**ITProvisionService** -- Leaf service backed by its own `it_provision_db` PostgreSQL database. Consumes `ProvisionCorporateAccountCommand` from the saga, simulates creating a corporate email account, and replies with `AccountProvisionedEvent` or `AccountProvisioningFailedEvent`. Uses a MassTransit EF Core transactional outbox to guarantee reliable event publishing. Exposes Swagger for API documentation.
 
-**NotificationService** -- Stateless leaf service. Consumes `SendWelcomeEmailCommand` from the saga, simulates sending a welcome email, and replies with `EmailSentEvent` or `EmailSendingFailedEvent`.
+**NotificationService** -- Leaf service backed by its own `notification_db` PostgreSQL database. Consumes `SendWelcomeEmailCommand` from the saga, simulates sending a welcome email, and replies with `EmailSentEvent` or `EmailSendingFailedEvent`. Uses a MassTransit EF Core transactional outbox to guarantee reliable event publishing. Exposes Swagger for API documentation.
 
-**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check routes are exposed for every downstream service. Injects an `X-Correlation-ID` header on every request.
+**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check and Swagger routes are exposed for every downstream service (Core, Users, IT Provision, Notification). Aggregated Swagger UI at `/swagger`. Injects an `X-Correlation-ID` header on every request.
 
 **Contracts** -- Shared class library (no dependencies) referenced by every service. Contains all MassTransit event and command record types so message schemas match exactly across the bus.
 
 ### Communication
 
 - **Synchronous** -- HTTP via the Gateway to each downstream service.
-- **Asynchronous** -- RabbitMQ (MassTransit) for domain events, saga commands, and saga reply events. CoreService uses a transactional EF Core outbox for reliable publishing.
+- **Asynchronous** -- RabbitMQ (MassTransit) for domain events, saga commands, and saga reply events. CoreService, ITProvisionService, and NotificationService each use a MassTransit EF Core transactional outbox backed by their own PostgreSQL database to guarantee reliable message publishing.
+
+### Swagger via Gateway
+
+The YARP gateway aggregates Swagger JSON from every downstream service into a single Swagger UI at `http://localhost:8000/swagger`. Available API docs:
+
+| Service             | Gateway Swagger JSON path                        |
+|---------------------|--------------------------------------------------|
+| Core Service        | `/core/swagger/v1/swagger.json`                  |
+| User Service        | `/users/swagger/v1/swagger.json`                 |
+| IT Provision Service| `/it-provision/swagger/v1/swagger.json`          |
+| Notification Service| `/notification/swagger/v1/swagger.json`          |
+
+### Transactional Outbox Pattern
+
+Every service that publishes messages to RabbitMQ uses the **MassTransit EF Core transactional outbox** to avoid the dual-write problem (writing to the database and publishing to the broker in the same logical operation).
+
+How it works:
+1. When a consumer (or use case) calls `Publish()`/`Send()`, the message is written to an `OutboxMessage` table in the same database transaction as the business data change.
+2. A background delivery service polls the outbox table and forwards messages to RabbitMQ.
+3. An `InboxState` table provides idempotent message consumption (duplicate detection).
+
+| Service              | Database           | Outbox DbContext        |
+|----------------------|--------------------|-------------------------|
+| CoreService          | `core_db`          | `CoreDbContext`         |
+| UserService          | `user_db`          | `UserDbContext`         |
+| ITProvisionService   | `it_provision_db`  | `ITProvisionDbContext`  |
+| NotificationService  | `notification_db`  | `NotificationDbContext` |
 
 ---
 

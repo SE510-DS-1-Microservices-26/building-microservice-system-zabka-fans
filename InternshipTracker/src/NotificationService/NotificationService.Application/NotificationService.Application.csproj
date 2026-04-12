@@ -12,7 +12,6 @@
 
     <ItemGroup>
         <PackageReference Include="MassTransit" Version="8.5.8" />
-        <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.8" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
     </ItemGroup>
 

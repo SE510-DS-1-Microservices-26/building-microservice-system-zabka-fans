@@ -15,6 +15,32 @@
       POSTGRES_DB: user_db
     volumes:
       - users_data:/var/lib/postgresql/data
+  it-provision-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: it_provision_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - it_provision_data:/var/lib/postgresql/data
+  notification-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: notification_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - notification_data:/var/lib/postgresql/data
   rabbitmq:
     image: rabbitmq:3-management-alpine
     environment:
@@ -60,9 +86,13 @@
       context: .
       dockerfile: src/ITProvisionService/ITProvisionService.Api/Dockerfile
     depends_on:
-        - rabbitmq
+      it-provision-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ITProvisionDb: "Host=it-provision-db;Port=5432;Database=it_provision_db;Username=postgres;Password=Password123!"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
@@ -71,9 +101,13 @@
       context: .
       dockerfile: src/NotificationService/NotificationService.Api/Dockerfile
     depends_on:
-        - rabbitmq
+      notification-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__NotificationDb: "Host=notification-db;Port=5432;Database=notification_db;Username=postgres;Password=Password123!"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
@@ -98,4 +132,6 @@
 volumes:
   core_data:
   users_data:
+  it_provision_data:
+  notification_data:
   rabbitmq_data:
