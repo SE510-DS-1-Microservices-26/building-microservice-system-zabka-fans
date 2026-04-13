@@ -7,7 +7,6 @@ namespace CoreService.Infrastructure.Saga;
 public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSagaState>
 {
     public State ProvisioningIT { get; private set; } = default!;
-    public State UpdatingUser { get; private set; } = default!;
     public State SendingNotification { get; private set; } = default!;
     public State Completed { get; private set; } = default!;
     public State Faulted { get; private set; } = default!;
@@ -15,8 +14,6 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
     public Event<OnboardingStartedEvent> OnboardingStarted { get; private set; } = default!;
     public Event<AccountProvisionedEvent> AccountProvisioned { get; private set; } = default!;
     public Event<AccountProvisioningFailedEvent> AccountProvisioningFailed { get; private set; } = default!;
-    public Event<CorporateEmailAddedEvent> CorporateEmailAdded { get; private set; } = default!;
-    public Event<CorporateEmailAdditionFailedEvent> CorporateEmailAdditionFailed { get; private set; } = default!;
     public Event<EmailSentEvent> EmailSent { get; private set; } = default!;
     public Event<EmailSendingFailedEvent> EmailSendingFailed { get; private set; } = default!;
 
@@ -27,8 +24,6 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
         Event(() => OnboardingStarted, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
         Event(() => AccountProvisioned, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
         Event(() => AccountProvisioningFailed, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
-        Event(() => CorporateEmailAdded, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
-        Event(() => CorporateEmailAdditionFailed, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
         Event(() => EmailSent, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
         Event(() => EmailSendingFailed, e => e.CorrelateById(ctx => ctx.Message.ApplicationId));
 
@@ -57,34 +52,13 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
                     ctx.Saga.CorporateEmail = ctx.Message.CorporateEmail;
                     ctx.Saga.UpdatedAt = DateTime.UtcNow;
                 })
-                .Publish(ctx => new AddCorporateEmailCommand(
-                    ctx.Saga.CorrelationId,
-                    ctx.Saga.CandidateId,
-                    ctx.Saga.CorporateEmail!))
-                .TransitionTo(UpdatingUser),
-
-            When(AccountProvisioningFailed)
-                .Then(ctx =>
-                {
-                    ctx.Saga.FaultReason = ctx.Message.Reason;
-                    ctx.Saga.UpdatedAt = DateTime.UtcNow;
-                })
-                .Publish(ctx => new RevertApplicationStatusCommand(ctx.Saga.CorrelationId))
-                .TransitionTo(Faulted)
-                .Finalize()
-        );
-
-        During(UpdatingUser,
-            When(CorporateEmailAdded)
-                .Then(ctx => ctx.Saga.UpdatedAt = DateTime.UtcNow)
                 .Publish(ctx => new SendWelcomeEmailCommand(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.CandidateEmail,
                     ctx.Saga.CorporateEmail!))
                 .TransitionTo(SendingNotification),
 
-            // user not found in UserService — compensate by reverting the application status
-            When(CorporateEmailAdditionFailed)
+            When(AccountProvisioningFailed)
                 .Then(ctx =>
                 {
                     ctx.Saga.FaultReason = ctx.Message.Reason;

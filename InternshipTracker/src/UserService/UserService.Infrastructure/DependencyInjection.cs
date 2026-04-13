@@ -8,7 +8,6 @@ using UserService.Application.Interfaces;
 using UserService.Application.UseCases;
 using UserService.Infrastructure.Hosting;
 using UserService.Infrastructure.Messaging;
-using UserService.Infrastructure.Messaging.Consumers;
 using UserService.Infrastructure.Persistence;
 using UserService.Infrastructure.Persistence.Repositories;
 
@@ -71,8 +70,6 @@ public static class DependencyInjection
 
         services.AddMassTransit(cfg =>
         {
-            cfg.AddConsumer<AddCorporateEmailConsumer>();
-
             cfg.UsingRabbitMq((context, rabbit) =>
             {
                 rabbit.Host(rabbitHost, "/", h =>
@@ -91,11 +88,6 @@ public static class DependencyInjection
                 outboxCfg.DuplicateDetectionWindow = TimeSpan.FromSeconds(60);
                 outboxCfg.UsePostgres();
                 outboxCfg.UseBusOutbox();
-            });
-
-            cfg.AddConfigureEndpointsCallback((context, name, receiveConfigurator) =>
-            {
-                receiveConfigurator.UseEntityFrameworkOutbox<UserDbContext>(context);
             });
         });
     }

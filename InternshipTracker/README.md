@@ -51,7 +51,7 @@ The Domain layer has no external dependencies.
 
 ### Services
 
-**UserService** -- Owns user data. Handles user write operations (create, delete). No read endpoints — all user reads are served by CoreService from its own read-replica. Each mutation publishes an event to RabbitMQ via MassTransit with an EF Core transactional outbox, backed by its own `user_db` PostgreSQL database. Also consumes `AddCorporateEmailCommand` from the onboarding saga to store the newly provisioned corporate email on the user entity.
+**UserService** -- Owns user data. Handles user write operations (create, delete). No read endpoints — all user reads are served by CoreService from its own read-replica. Each mutation publishes an event to RabbitMQ via MassTransit with an EF Core transactional outbox, backed by its own `user_db` PostgreSQL database.
 
 **CoreService** -- Owns internship and application data. Handles all read and write operations for internships and applications, and serves user reads from its own read-replica (`core_db`). Consumes user events from RabbitMQ (MassTransit) to keep the local user projection in sync. Hosts the **Onboarding Saga** state machine and its compensation consumers.
 
@@ -108,7 +108,7 @@ Pending ──► Accepted ──► Enrolling ──► Enrolled            (ha
                 │              │
                 │              ├──► EnrolledNotificationFault  (IT OK, email failed)
                 │              │
-                │              └──► Accepted                   (IT or user-update failed — compensation)
+                │              └──► Accepted                   (IT failed — compensation)
                 │
                 └──► Rejected
 ```
@@ -126,19 +126,17 @@ Pending ──► Accepted ──► Enrolling ──► Enrolled            (ha
 
 The saga is correlated by `ApplicationId` and persisted in the `OnboardingSagaState` table (EF Core, PostgreSQL).
 
-**States:** `ProvisioningIT`, `UpdatingUser`, `SendingNotification`, `Completed`, `Faulted`
+**States:** `ProvisioningIT`, `SendingNotification`, `Completed`, `Faulted`
 
 **Transitions:**
 
-| #  | Trigger Event                      | From State          | Command Published                    | To State            |
-|----|------------------------------------|---------------------|--------------------------------------|---------------------|
-| 1  | `OnboardingStartedEvent`           | Initial             | `ProvisionCorporateAccountCommand`   | ProvisioningIT      |
-| 2a | `AccountProvisionedEvent`          | ProvisioningIT      | `AddCorporateEmailCommand`           | UpdatingUser        |
-| 2b | `AccountProvisioningFailedEvent`   | ProvisioningIT      | `RevertApplicationStatusCommand`     | Faulted (removed)   |
-| 3a | `CorporateEmailAddedEvent`         | UpdatingUser        | `SendWelcomeEmailCommand`            | SendingNotification |
-| 3b | `CorporateEmailAdditionFailedEvent`| UpdatingUser        | `RevertApplicationStatusCommand`     | Faulted (removed)   |
-| 4a | `EmailSentEvent`                   | SendingNotification | `FinalizeEnrollmentCommand`          | Completed (removed) |
-| 4b | `EmailSendingFailedEvent`          | SendingNotification | `FaultApplicationEnrollmentCommand`  | Faulted (removed)   |
+| #  | Trigger Event                    | From State          | Command Published                    | To State            |
+|----|----------------------------------|---------------------|--------------------------------------|---------------------|
+| 1  | `OnboardingStartedEvent`         | Initial             | `ProvisionCorporateAccountCommand`   | ProvisioningIT      |
+| 2a | `AccountProvisionedEvent`        | ProvisioningIT      | `SendWelcomeEmailCommand`            | SendingNotification |
+| 2b | `AccountProvisioningFailedEvent` | ProvisioningIT      | `RevertApplicationStatusCommand`     | Faulted             |
+| 3a | `EmailSentEvent`                 | SendingNotification | `FinalizeEnrollmentCommand`          | Completed (removed) |
+| 3b | `EmailSendingFailedEvent`        | SendingNotification | `FaultApplicationEnrollmentCommand`  | Faulted             |
 
 ```
                         ┌──────────────────────────────────────────┐
@@ -154,25 +152,17 @@ The saga is correlated by `ApplicationId` and persisted in the `OnboardingSagaSt
                     AccountProvisionedEvent    AccountProvisioningFailedEvent
                                   │                       │
                                   ▼                       ▼
-                       ┌────────────────────┐    ┌──────────────┐
-                       │   UpdatingUser     │    │   Faulted    │
-                       └──────┬───────┬─────┘    └──────────────┘
-               success ◄──────┘       └──────► failure      ▲
+                      ┌──────────────────────┐   ┌──────────────┐
+                      │ SendingNotification  │   │   Faulted    │
+                      └──────┬─────────┬─────┘   └──────────────┘
+               success ◄─────┘         └─────► failure      ▲
                        │                       │             │
-              CorporateEmailAddedEvent  CorporateEmail-     │
-                       │                AdditionFailed       │
-                       ▼                       │             │
-           ┌──────────────────────┐            │             │
-           │ SendingNotification  │            └─────────────┘
-           └──────┬─────────┬─────┘                          │
-    success ◄─────┘         └─────► failure                  │
-            │                       │                        │
-     EmailSentEvent       EmailSendingFailedEvent            │
-            │                       │                        │
-            ▼                       └────────────────────────┘
-     ┌─────────────┐
-     │  Completed  │ → finalized & removed
-     └─────────────┘
+                EmailSentEvent       EmailSendingFailedEvent │
+                       │                       │             │
+                       ▼                       └─────────────┘
+                ┌─────────────┐
+                │  Completed  │ → finalized & removed
+                └─────────────┘
 ```
 
 ### Shared Contracts
@@ -182,39 +172,34 @@ All saga messages live in the `Contracts` project:
 ```
 src/Contracts/
     Events/
-        OnboardingStartedEvent              (ApplicationId, CandidateId, CandidateName, CandidateEmail)
-        AccountProvisionedEvent             (ApplicationId, CorporateEmail)
-        AccountProvisioningFailedEvent      (ApplicationId, Reason)
-        CorporateEmailAddedEvent            (ApplicationId, CandidateId, CorporateEmail)
-        CorporateEmailAdditionFailedEvent   (ApplicationId, Reason)
-        EmailSentEvent                      (ApplicationId)
-        EmailSendingFailedEvent             (ApplicationId, Reason)
+        OnboardingStartedEvent          (ApplicationId, CandidateId, CandidateName, CandidateEmail)
+        AccountProvisionedEvent         (ApplicationId, CorporateEmail)
+        AccountProvisioningFailedEvent  (ApplicationId, Reason)
+        EmailSentEvent                  (ApplicationId)
+        EmailSendingFailedEvent         (ApplicationId, Reason)
     Commands/
-        ProvisionCorporateAccountCommand    (ApplicationId, CandidateId, CandidateName, CandidateEmail)
-        AddCorporateEmailCommand            (ApplicationId, CandidateId, CorporateEmail)
-        SendWelcomeEmailCommand             (ApplicationId, CandidateEmail, CorporateEmail)
-        RevertApplicationStatusCommand      (ApplicationId)
-        FinalizeEnrollmentCommand           (ApplicationId)
-        FaultApplicationEnrollmentCommand   (ApplicationId, Reason)
+        ProvisionCorporateAccountCommand  (ApplicationId, CandidateId, CandidateName, CandidateEmail)
+        SendWelcomeEmailCommand           (ApplicationId, CandidateEmail, CorporateEmail)
+        RevertApplicationStatusCommand    (ApplicationId)
+        FinalizeEnrollmentCommand         (ApplicationId)
+        FaultApplicationEnrollmentCommand (ApplicationId, Reason)
 ```
 
 ### CoreService Saga Consumers
 
-Four consumers in `CoreService.Infrastructure/Messaging/Consumers/` react to saga commands and events:
+Three consumers in `CoreService.Infrastructure/Messaging/Consumers/` react to saga commands:
 
-| Consumer                              | Consumes                           | Action                                     |
+| Consumer                              | Command                            | Action                                     |
 |---------------------------------------|------------------------------------|--------------------------------------------|
 | `FinalizeEnrollmentConsumer`          | `FinalizeEnrollmentCommand`        | `Enrolling → Enrolled`                     |
 | `RevertApplicationStatusConsumer`     | `RevertApplicationStatusCommand`   | `Enrolling → Accepted` (compensation)      |
 | `FaultApplicationEnrollmentConsumer`  | `FaultApplicationEnrollmentCommand`| `Enrolling → EnrolledNotificationFault`    |
-| `CorporateEmailSyncConsumer`         | `CorporateEmailAddedEvent`         | Syncs corporate email to `UserCore` replica|
 
 ### Leaf Service Consumers
 
 | Service              | Consumer                              | Consumes                             | Publishes on Success             | Publishes on Failure                  |
 |----------------------|---------------------------------------|--------------------------------------|----------------------------------|---------------------------------------|
 | ITProvisionService   | `ProvisionCorporateAccountConsumer`   | `ProvisionCorporateAccountCommand`   | `AccountProvisionedEvent`        | `AccountProvisioningFailedEvent`      |
-| UserService          | `AddCorporateEmailConsumer`           | `AddCorporateEmailCommand`           | `CorporateEmailAddedEvent`       | `CorporateEmailAdditionFailedEvent`   |
 | NotificationService  | `SendWelcomeEmailConsumer`            | `SendWelcomeEmailCommand`            | `EmailSentEvent`                 | `EmailSendingFailedEvent`             |
 
 ---

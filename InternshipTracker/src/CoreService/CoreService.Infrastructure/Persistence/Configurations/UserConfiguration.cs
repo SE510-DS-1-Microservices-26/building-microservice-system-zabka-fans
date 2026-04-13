@@ -20,9 +20,6 @@ public class UserConfiguration : IEntityTypeConfiguration<UserCore>
             .IsRequired()
             .HasMaxLength(320);
 
-        builder.Property(user => user.CorporateEmail)
-            .HasMaxLength(320);
-
         builder.Property(user => user.Level)
             .HasConversion<string>()
             .IsRequired();

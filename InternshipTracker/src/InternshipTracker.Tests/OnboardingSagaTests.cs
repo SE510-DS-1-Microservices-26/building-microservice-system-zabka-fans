@@ -59,17 +59,10 @@ public class OnboardingSagaTests : IAsyncDisposable
         Assert.That(await _sagaHarness.Exists(ApplicationId, s => s.ProvisioningIT), Is.Not.Null);
     }
 
-    private async Task DriveToUpdatingUser()
+    private async Task DriveToSendingNotification()
     {
         await DriveToProvisioningIT();
         await _harness.Bus.Publish(new AccountProvisionedEvent(ApplicationId, CorporateEmail));
-        Assert.That(await _sagaHarness.Exists(ApplicationId, s => s.UpdatingUser), Is.Not.Null);
-    }
-
-    private async Task DriveToSendingNotification()
-    {
-        await DriveToUpdatingUser();
-        await _harness.Bus.Publish(new CorporateEmailAddedEvent(ApplicationId, CandidateId, CorporateEmail));
         Assert.That(await _sagaHarness.Exists(ApplicationId, s => s.SendingNotification), Is.Not.Null);
     }
 
@@ -113,38 +106,7 @@ public class OnboardingSagaTests : IAsyncDisposable
     // AccountProvisioned
 
     [Test]
-    public async Task AccountProvisioned_TransitionsToUpdatingUser()
-    {
-        await DriveToUpdatingUser();
-
-        Assert.That(
-            await _sagaHarness.Exists(ApplicationId, s => s.UpdatingUser),
-            Is.Not.Null);
-    }
-
-    [Test]
-    public async Task AccountProvisioned_StoresCorporateEmail()
-    {
-        await DriveToUpdatingUser();
-
-        var saga = _sagaHarness.Sagas.ContainsInState(ApplicationId, _sagaHarness.StateMachine, s => s.UpdatingUser);
-        Assert.That(saga!.CorporateEmail, Is.EqualTo(CorporateEmail));
-    }
-
-    [Test]
-    public async Task AccountProvisioned_PublishesAddCorporateEmailCommand()
-    {
-        await DriveToUpdatingUser();
-
-        Assert.That(await _harness.Published.Any<AddCorporateEmailCommand>(
-            x => x.Context.Message.ApplicationId == ApplicationId
-                 && x.Context.Message.CorporateEmail == CorporateEmail), Is.True);
-    }
-
-    // CorporateEmailAdded
-
-    [Test]
-    public async Task CorporateEmailAdded_TransitionsToSendingNotification()
+    public async Task AccountProvisioned_TransitionsToSendingNotification()
     {
         await DriveToSendingNotification();
 
@@ -154,39 +116,22 @@ public class OnboardingSagaTests : IAsyncDisposable
     }
 
     [Test]
-    public async Task CorporateEmailAdded_PublishesSendWelcomeEmailCommand()
+    public async Task AccountProvisioned_StoresCorporateEmail()
+    {
+        await DriveToSendingNotification();
+
+        var saga = _sagaHarness.Sagas.ContainsInState(ApplicationId, _sagaHarness.StateMachine, s => s.SendingNotification);
+        Assert.That(saga!.CorporateEmail, Is.EqualTo(CorporateEmail));
+    }
+
+    [Test]
+    public async Task AccountProvisioned_PublishesSendWelcomeEmailCommand()
     {
         await DriveToSendingNotification();
 
         Assert.That(await _harness.Published.Any<SendWelcomeEmailCommand>(
             x => x.Context.Message.ApplicationId == ApplicationId
                  && x.Context.Message.CorporateEmail == CorporateEmail), Is.True);
-    }
-
-    // CorporateEmailAdditionFailed
-
-    [Test]
-    public async Task CorporateEmailAdditionFailed_FinalizesAndRemovesSaga()
-    {
-        await DriveToUpdatingUser();
-        await _harness.Bus.Publish(new CorporateEmailAdditionFailedEvent(ApplicationId, "User not found"));
-
-        Assert.That(await _harness.Published.Any<RevertApplicationStatusCommand>(
-            x => x.Context.Message.ApplicationId == ApplicationId), Is.True);
-
-        var remaining = _sagaHarness.Sagas.ContainsInState(
-            ApplicationId, _sagaHarness.StateMachine, s => s.Faulted);
-        Assert.That(remaining, Is.Null, "Saga should be finalized after corporate email failure");
-    }
-
-    [Test]
-    public async Task CorporateEmailAdditionFailed_PublishesRevertCommand()
-    {
-        await DriveToUpdatingUser();
-        await _harness.Bus.Publish(new CorporateEmailAdditionFailedEvent(ApplicationId, "User not found"));
-
-        Assert.That(await _harness.Published.Any<RevertApplicationStatusCommand>(
-            x => x.Context.Message.ApplicationId == ApplicationId), Is.True);
     }
 
     // AccountProvisioningFailed
