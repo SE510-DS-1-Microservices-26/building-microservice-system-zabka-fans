@@ -66,6 +66,7 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
                 })
                 .Publish(ctx => new RevertApplicationStatusCommand(ctx.Saga.CorrelationId))
                 .TransitionTo(Faulted)
+                .Finalize()
         );
 
         During(SendingNotification,
@@ -86,6 +87,7 @@ public class OnboardingSagaStateMachine : MassTransitStateMachine<OnboardingSaga
                     ctx.Saga.CorrelationId,
                     ctx.Message.Reason))
                 .TransitionTo(Faulted)
+                .Finalize()
         );
 
         SetCompletedWhenFinalized();

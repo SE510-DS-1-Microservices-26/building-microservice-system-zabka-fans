@@ -137,26 +137,18 @@ public class OnboardingSagaTests : IAsyncDisposable
     // AccountProvisioningFailed
 
     [Test]
-    public async Task AccountProvisioningFailed_TransitionsToFaulted()
-    {
-        await DriveToProvisioningIT();
-
-        await _harness.Bus.Publish(new AccountProvisioningFailedEvent(ApplicationId, ProvisioningFailureReason));
-
-        Assert.That(
-            await _sagaHarness.Exists(ApplicationId, s => s.Faulted),
-            Is.Not.Null);
-    }
-
-    [Test]
-    public async Task AccountProvisioningFailed_StoresFaultReason()
+    public async Task AccountProvisioningFailed_FinalizesAndRemovesSaga()
     {
         await DriveToProvisioningIT();
         await _harness.Bus.Publish(new AccountProvisioningFailedEvent(ApplicationId, ProvisioningFailureReason));
-        Assert.That(await _sagaHarness.Exists(ApplicationId, s => s.Faulted), Is.Not.Null);
 
-        var saga = _sagaHarness.Sagas.ContainsInState(ApplicationId, _sagaHarness.StateMachine, s => s.Faulted);
-        Assert.That(saga!.FaultReason, Is.EqualTo(ProvisioningFailureReason));
+        // wait for the compensating command as a sync barrier
+        Assert.That(await _harness.Published.Any<RevertApplicationStatusCommand>(
+            x => x.Context.Message.ApplicationId == ApplicationId), Is.True);
+
+        var remaining = _sagaHarness.Sagas.ContainsInState(
+            ApplicationId, _sagaHarness.StateMachine, s => s.Faulted);
+        Assert.That(remaining, Is.Null, "Saga should be finalized after provisioning failure");
     }
 
     [Test]
@@ -200,26 +192,18 @@ public class OnboardingSagaTests : IAsyncDisposable
     // EmailSendingFailed
 
     [Test]
-    public async Task EmailSendingFailed_TransitionsToFaulted()
-    {
-        await DriveToSendingNotification();
-
-        await _harness.Bus.Publish(new EmailSendingFailedEvent(ApplicationId, EmailFailureReason));
-
-        Assert.That(
-            await _sagaHarness.Exists(ApplicationId, s => s.Faulted),
-            Is.Not.Null);
-    }
-
-    [Test]
-    public async Task EmailSendingFailed_StoresFaultReason()
+    public async Task EmailSendingFailed_FinalizesAndRemovesSaga()
     {
         await DriveToSendingNotification();
         await _harness.Bus.Publish(new EmailSendingFailedEvent(ApplicationId, EmailFailureReason));
-        Assert.That(await _sagaHarness.Exists(ApplicationId, s => s.Faulted), Is.Not.Null);
 
-        var saga = _sagaHarness.Sagas.ContainsInState(ApplicationId, _sagaHarness.StateMachine, s => s.Faulted);
-        Assert.That(saga!.FaultReason, Is.EqualTo(EmailFailureReason));
+        // wait for the fault command as a sync barrier
+        Assert.That(await _harness.Published.Any<FaultApplicationEnrollmentCommand>(
+            x => x.Context.Message.ApplicationId == ApplicationId), Is.True);
+
+        var remaining = _sagaHarness.Sagas.ContainsInState(
+            ApplicationId, _sagaHarness.StateMachine, s => s.Faulted);
+        Assert.That(remaining, Is.Null, "Saga should be finalized after email failure");
     }
 
     [Test]
