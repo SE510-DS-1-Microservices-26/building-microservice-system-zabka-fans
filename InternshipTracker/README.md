@@ -244,6 +244,154 @@ dotnet test
 
 Tests include saga state-machine tests (`OnboardingSagaTests`) that use the MassTransit in-memory test harness to verify every state transition and compensation path, plus an end-to-end saga smoke test (`SagaSmokeTests`) that boots CoreService against a real PostgreSQL via **Testcontainers**, wires MassTransit in-memory with mock leaf consumers, and drives the full enrollment flow through the HTTP API.
 
+## Kubernetes Deployment
+
+### Cluster Setup
+
+```bash
+minikube start
+minikube addons enable ingress
+```
+
+### Build Docker Images
+
+Point Docker to minikube's daemon and build all service images:
+
+```bash
+# On Windows (Git Bash)
+minikube docker-env --shell bash | source /dev/stdin
+
+# On Linux / macOS
+eval $(minikube docker-env)
+```
+
+Build from the `InternshipTracker/` directory:
+
+```bash
+cd InternshipTracker
+
+docker build -t internship-tracker/core-service:latest -f src/CoreService/CoreService.Api/Dockerfile .
+docker build -t internship-tracker/user-service:latest -f src/UserService/UserService.Api/Dockerfile .
+docker build -t internship-tracker/it-provision-service:latest -f src/ITProvisionService/ITProvisionService.Api/Dockerfile .
+docker build -t internship-tracker/notification-service:latest -f src/NotificationService/NotificationService.Api/Dockerfile .
+docker build -t internship-tracker/gateway-service:latest -f src/GatewayService/Dockerfile .
+```
+
+Alternatively, build locally and load into minikube:
+
+```bash
+minikube image load internship-tracker/core-service:latest
+minikube image load internship-tracker/user-service:latest
+minikube image load internship-tracker/it-provision-service:latest
+minikube image load internship-tracker/notification-service:latest
+minikube image load internship-tracker/gateway-service:latest
+```
+
+### Deploy
+
+```bash
+# Apply namespace first (other resources depend on it)
+kubectl apply -f k8s/namespace.yaml
+
+# Apply all manifests
+kubectl apply -f k8s/
+```
+
+### Verify
+
+```bash
+# All pods should be Running
+kubectl get pods -n internship-tracker
+
+# Check services
+kubectl get svc -n internship-tracker
+
+# Check ingress
+kubectl get ingress -n internship-tracker
+```
+
+### Reach the Gateway
+
+Start the minikube tunnel (keep it running in a separate terminal):
+
+```bash
+minikube tunnel
+```
+
+Add to your hosts file (`C:\Windows\System32\drivers\etc\hosts` on Windows, `/etc/hosts` on Linux/macOS):
+
+```
+127.0.0.1  internship-tracker.local
+```
+
+Verify all services are healthy:
+
+```bash
+curl http://internship-tracker.local/core/health
+curl http://internship-tracker.local/users/health
+curl http://internship-tracker.local/it-provision/health
+curl http://internship-tracker.local/notification/health
+```
+
+### Verify Workflow (Saga)
+
+Test the success path:
+
+```bash
+# Create a user
+curl -X POST http://internship-tracker.local/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "John Doe", "email": "john.doe@example.com", "level": 1}'
+
+# Create an internship
+curl -X POST http://internship-tracker.local/internships \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Software Engineering Intern", "capacity": 10, "minimumLevel": 1}'
+
+# Apply for the internship
+curl -X POST http://internship-tracker.local/applications \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "<user-id>", "internshipId": "<internship-id>"}'
+
+# Accept the application
+curl -X POST http://internship-tracker.local/applications/{id}/accept
+
+# Enroll (triggers the onboarding saga)
+curl -X POST http://internship-tracker.local/applications/{id}/enroll
+
+# Check final status (should be Enrolled=3 or EnrolledNotificationFault=5)
+curl http://internship-tracker.local/applications/{id}
+```
+
+Test the compensation path: if ITProvisionService fails during onboarding, the saga reverts the application status from `Enrolling` back to `Accepted`.
+
+### K8s Manifest Structure
+
+```
+k8s/
+├── namespace.yaml              # internship-tracker namespace
+├── configmap.yaml              # Shared config (RabbitMQ host, service URLs)
+├── secret.yaml                 # Database passwords, connection strings
+├── rabbitmq.yaml               # Deployment + Service (AMQP + management UI)
+├── postgres-core.yaml          # StatefulSet + PVC + headless Service
+├── postgres-users.yaml         # StatefulSet + PVC + headless Service
+├── postgres-it-provision.yaml  # StatefulSet + PVC + headless Service
+├── postgres-notification.yaml  # StatefulSet + PVC + headless Service
+├── core-service.yaml           # Deployment + Service
+├── user-service.yaml           # Deployment + Service
+├── it-provision-service.yaml   # Deployment + Service
+├── notification-service.yaml   # Deployment + Service
+├── gateway-service.yaml        # ConfigMap (YARP overrides) + Deployment + Service
+└── ingress.yaml                # nginx Ingress → Gateway
+```
+
+### Teardown
+
+```bash
+kubectl delete namespace internship-tracker
+minikube stop
+```
+
 ## API Examples
 
 All requests go through the Gateway on port `8000`.

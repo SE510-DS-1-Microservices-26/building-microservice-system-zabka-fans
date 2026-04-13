@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: internship-tracker
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  RabbitMQ__Host: "rabbitmq"
+  RabbitMQ__Username: "guest"
+  UsersService__BaseUrl: "http://user-service:8080"
