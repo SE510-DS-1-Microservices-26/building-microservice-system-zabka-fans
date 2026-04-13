@@ -16,7 +16,7 @@ public class ApplicationStateTransitionTests
     {
         var candidate = new UserCore(Guid.NewGuid(), DefaultCandidateName, DefaultCandidateEmail, DefaultLevel);
         var internship = new Internship(Guid.NewGuid(), DefaultInternshipTitle, DefaultCapacity, DefaultLevel);
-        var app = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
+        var app = new InternshipApplication(Guid.NewGuid(), internship, candidate);
 
         if (targetStatus >= ApplicationStatus.Accepted) app.MarkAsAccepted();
         if (targetStatus >= ApplicationStatus.Enrolling) app.MarkAsEnrolling();
@@ -150,7 +150,7 @@ public class ApplicationStateTransitionTests
         // EnrolledNotificationFault is off the linear path, so build it manually
         var candidate = new UserCore(Guid.NewGuid(), DefaultCandidateName, DefaultCandidateEmail, DefaultLevel);
         var internship = new Internship(Guid.NewGuid(), DefaultInternshipTitle, DefaultCapacity, DefaultLevel);
-        var app = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
+        var app = new InternshipApplication(Guid.NewGuid(), internship, candidate);
         app.MarkAsAccepted();
         app.MarkAsEnrolling();
         app.MarkAsEnrolledNotificationFault();

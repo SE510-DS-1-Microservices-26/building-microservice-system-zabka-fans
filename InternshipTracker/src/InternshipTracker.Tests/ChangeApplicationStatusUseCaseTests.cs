@@ -26,7 +26,7 @@ public class ChangeApplicationStatusUseCaseTests
     {
         var candidate = new UserCore(Guid.NewGuid(), "Test User", "test.user@example.com", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Test Internship", capacity, CandidateLevel.Junior);
-        var app = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
+        var app = new InternshipApplication(Guid.NewGuid(), internship, candidate);
 
         if (initialStatus >= ApplicationStatus.Accepted) app.MarkAsAccepted();
         if (initialStatus >= ApplicationStatus.Enrolling) app.MarkAsEnrolling();

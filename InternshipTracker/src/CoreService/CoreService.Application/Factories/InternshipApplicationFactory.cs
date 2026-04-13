@@ -15,19 +15,17 @@ public class InternshipApplicationFactory
     }
 
     public async Task<InternshipApplication> CreateAsync(
-        Guid candidateId,
-        CandidateLevel candidateLevel,
         Internship internship,
         UserCore candidate,
         CancellationToken cancellationToken = default)
     {
-        if (candidateLevel < internship.MinimumLevel)
-            throw new UnderqualifiedException($"Candidate level '{candidateLevel}' does not meet the requirement.");
+        if (candidate.Level < internship.MinimumLevel)
+            throw new UnderqualifiedException($"Candidate level '{candidate.Level}' does not meet the requirement.");
 
-        var hasApplied = await _duplicationChecker.HasAppliedAsync(candidateId, internship.Id, cancellationToken);
+        var hasApplied = await _duplicationChecker.HasAppliedAsync(candidate.Id, internship.Id, cancellationToken);
         if (hasApplied)
             throw new DuplicateApplicationException("The candidate has already applied to this internship.");
 
-        return new InternshipApplication(Guid.NewGuid(), candidateId, candidateLevel, internship, candidate);
+        return new InternshipApplication(Guid.NewGuid(), internship, candidate);
     }
 }

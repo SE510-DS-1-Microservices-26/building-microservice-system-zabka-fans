@@ -12,11 +12,11 @@ public class InternshipApplication
     public Internship Internship { get; private set; }
     public ApplicationStatus Status { get; private set; }
     
-    public InternshipApplication(Guid id, Guid candidateId, CandidateLevel level, Internship internship, UserCore candidate)
+    public InternshipApplication(Guid id, Internship internship, UserCore candidate)
     {
         Id = id;
-        CandidateId = candidateId;
-        CandidateLevel = level;
+        CandidateId = candidate.Id;
+        CandidateLevel = candidate.Level;
         Internship = internship;
         Candidate = candidate;
         Status = ApplicationStatus.Pending;

@@ -29,7 +29,7 @@ public class GetApplicationByIdUseCaseTests
         // Arrange
         var candidate = new UserCore(Guid.NewGuid(), "Alice Smith", "alice@example.com", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Summer Internship", 10, CandidateLevel.Junior);
-        var application = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
+        var application = new InternshipApplication(Guid.NewGuid(), internship, candidate);
 
         _appRepo.GetWithDetailsAsync(application.Id, Arg.Any<CancellationToken>())
             .Returns(application);
@@ -77,7 +77,7 @@ public class GetApplicationByIdUseCaseTests
         // Arrange
         var candidate = new UserCore(Guid.NewGuid(), "Bob Jones", "bob@example.com", CandidateLevel.Middle);
         var internship = new Internship(Guid.NewGuid(), "Backend Internship", 5, CandidateLevel.Junior);
-        var application = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
+        var application = new InternshipApplication(Guid.NewGuid(), internship, candidate);
         application.MarkAsAccepted();
 
         _appRepo.GetWithDetailsAsync(application.Id, Arg.Any<CancellationToken>())

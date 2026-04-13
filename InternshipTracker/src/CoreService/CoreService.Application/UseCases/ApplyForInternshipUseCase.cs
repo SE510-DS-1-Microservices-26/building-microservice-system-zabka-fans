@@ -56,8 +56,7 @@ public class ApplyForInternshipUseCase : IUseCase<ApplyForInternshipRequest, App
                 ErrorType.NotFound));
         }
 
-        var application =
-            await _domainFactory.CreateAsync(request.UserId, user.Level, internship, user, cancellationToken);
+        var application = await _domainFactory.CreateAsync(internship, user, cancellationToken);
 
         await _applicationRepository.AddAsync(application, cancellationToken);
         await _applicationRepository.UnitOfWork.SaveChangesAsync(cancellationToken);

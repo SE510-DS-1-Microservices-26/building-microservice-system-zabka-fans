@@ -15,7 +15,7 @@ public class DomainTests
         // Arrange
         var candidate = new UserCore(Guid.NewGuid(), "John Doe", "john.doe@example.com", CandidateLevel.Junior);
         var internship = new Internship(Guid.NewGuid(), "Software Intern", 11, CandidateLevel.Junior);
-        var application = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
+        var application = new InternshipApplication(Guid.NewGuid(), internship, candidate);
 
         application.MarkAsAccepted();
         application.MarkAsEnrolling();
@@ -40,7 +40,7 @@ public class DomainTests
 
         // Act & Assert
         Assert.ThrowsAsync<UnderqualifiedException>(() =>
-            factory.CreateAsync(candidate.Id, candidate.Level, internship, candidate));
+            factory.CreateAsync(internship, candidate));
     }
 
     [Test]
@@ -49,7 +49,7 @@ public class DomainTests
         // Arrange
         var internship = new Internship(Guid.NewGuid(), "Software Intern", 2, CandidateLevel.Junior);
         var candidate = new UserCore(Guid.NewGuid(), "John Doe", "john.doe@example.com", CandidateLevel.Junior);
-        var application = new InternshipApplication(Guid.NewGuid(), candidate.Id, candidate.Level, internship, candidate);
+        var application = new InternshipApplication(Guid.NewGuid(), internship, candidate);
 
         var capacityChecker = Substitute.For<IInternshipCapacityChecker>();
         capacityChecker
