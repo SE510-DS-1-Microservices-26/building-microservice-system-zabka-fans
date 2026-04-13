@@ -96,6 +96,7 @@ public static class DependencyInjection
         {
             cfg.AddConsumer<UserDbMessageConsumer>();
             cfg.AddConsumer<UserDbMessageFaultConsumer>();
+            cfg.AddConsumer<CorporateEmailSyncConsumer>();
             cfg.AddConsumer<RevertApplicationStatusConsumer>();
             cfg.AddConsumer<FinalizeEnrollmentConsumer>();
             cfg.AddConsumer<FaultApplicationEnrollmentConsumer>();

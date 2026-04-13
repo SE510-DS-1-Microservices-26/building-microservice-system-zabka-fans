@@ -80,8 +80,10 @@ public class SagaSmokeTests
                         cfg.AddConsumer<CoreService.Infrastructure.Messaging.Consumers.RevertApplicationStatusConsumer>();
                         cfg.AddConsumer<CoreService.Infrastructure.Messaging.Consumers.FinalizeEnrollmentConsumer>();
                         cfg.AddConsumer<CoreService.Infrastructure.Messaging.Consumers.FaultApplicationEnrollmentConsumer>();
+                        cfg.AddConsumer<CoreService.Infrastructure.Messaging.Consumers.CorporateEmailSyncConsumer>();
 
                         cfg.AddConsumer<MockProvisionConsumer>();
+                        cfg.AddConsumer<MockAddCorporateEmailConsumer>();
                         cfg.AddConsumer<MockNotificationConsumer>();
                     });
                 });
@@ -175,6 +177,16 @@ public class SagaSmokeTests
             var cmd = context.Message;
             var email = cmd.CandidateName.Replace(" ", ".").ToLowerInvariant() + "@corp.test.com";
             await context.Publish(new AccountProvisionedEvent(cmd.ApplicationId, email));
+        }
+    }
+
+    private class MockAddCorporateEmailConsumer : IConsumer<AddCorporateEmailCommand>
+    {
+        public async Task Consume(ConsumeContext<AddCorporateEmailCommand> context)
+        {
+            var cmd = context.Message;
+            await context.Publish(new CorporateEmailAddedEvent(
+                cmd.ApplicationId, cmd.CandidateId, cmd.CorporateEmail));
         }
     }
 

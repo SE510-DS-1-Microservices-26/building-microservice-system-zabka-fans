@@ -7,6 +7,7 @@ public class User
     public Guid Id { get; init; }
     public string Name { get; private set; }
     public string Email { get; private set; }
+    public string? CorporateEmail { get; private set; }
     public CandidateLevel Level { get; private set; }
 
     public User(Guid id, string name, string email, CandidateLevel level)
@@ -21,6 +22,14 @@ public class User
         Name = name;
         Email = email;
         Level = level;
+    }
+
+    public void SetCorporateEmail(string corporateEmail)
+    {
+        if (string.IsNullOrWhiteSpace(corporateEmail))
+            throw new ArgumentException("Corporate email cannot be empty.", nameof(corporateEmail));
+
+        CorporateEmail = corporateEmail;
     }
 
     // For EF core
