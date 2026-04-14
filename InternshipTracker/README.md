@@ -436,6 +436,36 @@ kubectl delete namespace internship-tracker
 minikube stop
 ```
 
+## Infrastructure Services
+
+Infrastructure services (brokers, dashboards, admin UIs) are exposed through the YARP Gateway under dedicated path prefixes. All traffic — including these — enters the cluster via the single nginx Ingress and is routed by the Gateway. No separate Ingress rules are needed for infra services.
+
+| Service             | Path prefix    | Access URL (Kubernetes)                            | Access URL (Docker Compose)          |
+|---------------------|----------------|----------------------------------------------------|--------------------------------------|
+| RabbitMQ Management | `/rabbitmq/`   | `http://internship-tracker.local/rabbitmq/`        | `http://localhost:15672/rabbitmq/`   |
+
+### RabbitMQ Management UI
+
+The RabbitMQ management dashboard is proxied by the Gateway via the `rabbitmq-management-route` YARP route, which forwards all `/rabbitmq/{**catch-all}` traffic to the `rabbitmq` cluster (port `15672`).
+
+The `RABBITMQ_MANAGEMENT_PATH_PREFIX=/rabbitmq` environment variable is set on the RabbitMQ container so that the management UI generates all its internal asset and API links under the `/rabbitmq/` prefix. Without this, the UI's JavaScript would request assets from `/` and break when accessed through the prefixed path.
+
+**Kubernetes:**
+```
+http://internship-tracker.local/rabbitmq/
+```
+
+**Docker Compose (direct, bypassing YARP):**
+```
+http://localhost:15672/rabbitmq/
+```
+
+Default credentials: `guest` / `guest` (set via `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS`).
+
+> **Note:** The Polly resilience pipeline (retry, circuit breaker, timeout) in the Gateway applies to all proxied routes including `/rabbitmq/`. The management UI uses WebSockets for live stats — if the connection is held open longer than the configured `TimeoutSeconds` (default 10 s) it will be terminated. For real-time dashboard use, consider raising `Resilience__TimeoutSeconds` via an environment variable override or accessing RabbitMQ directly on port `15672` during local development.
+
+---
+
 ## API Examples
 
 All requests go through the Gateway on port `8000`.

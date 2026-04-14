@@ -8,6 +8,7 @@ data:
   ReverseProxy__Clusters__users__Destinations__default__Address: "http://user-service:8080"
   ReverseProxy__Clusters__it-provision__Destinations__default__Address: "http://it-provision-service:8080"
   ReverseProxy__Clusters__notification__Destinations__default__Address: "http://notification-service:8080"
+  ReverseProxy__Clusters__rabbitmq__Destinations__default__Address: "http://rabbitmq:15672"
 ---
 apiVersion: apps/v1
 kind: Deployment
