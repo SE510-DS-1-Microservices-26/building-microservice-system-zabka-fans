@@ -18,5 +18,3 @@ spec:
                 name: gateway-service
                 port:
                   number: 80
-                port:
-                  number: 15672
