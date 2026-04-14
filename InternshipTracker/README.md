@@ -59,7 +59,7 @@ The Domain layer has no external dependencies.
 
 **NotificationService** -- Leaf service backed by its own `notification_db` PostgreSQL database. Consumes `SendWelcomeEmailCommand` from the saga, simulates sending a welcome email, and replies with `EmailSentEvent` or `EmailSendingFailedEvent`. Uses a MassTransit EF Core transactional outbox to guarantee reliable event publishing. Exposes Swagger for API documentation.
 
-**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check and Swagger routes are exposed for every downstream service (Core, Users, IT Provision, Notification). Aggregated Swagger UI at `/swagger`. Wraps every proxied request with a **Polly resilience pipeline** (circuit breaker → retry → per-attempt timeout) via a custom `IForwarderHttpClientFactory`. Derives the `X-Correlation-ID` response header from the active W3C `TraceId` so that the correlation ID is identical to the trace ID visible in any tracing tool.
+**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check and Swagger routes are exposed for every downstream service (Core, Users, IT Provision, Notification). Aggregated Swagger UI at `/swagger`. Wraps every proxied request with a **Polly resilience pipeline** (circuit breaker → retry → per-attempt timeout) via a custom `IForwarderHttpClientFactory`. Propagates `X-Correlation-ID` from the incoming client request, or generates a new `Guid` if the header is absent, and forwards it to every downstream service so the same ID flows through the entire request chain.
 
 **Contracts** -- Shared class library (no dependencies) referenced by every service. Contains all MassTransit event and command record types so message schemas match exactly across the bus.
 
@@ -126,51 +126,18 @@ Tune the defaults without redeploying by changing the `Resilience` section in `a
 }
 ```
 
-### Distributed Tracing & Correlation IDs
+### Correlation IDs
 
-All five services are wired with **OpenTelemetry** (`OpenTelemetry.Extensions.Hosting` + `OpenTelemetry.Instrumentation.AspNetCore` v1.12.0).
+The system uses a lightweight, header-based correlation ID pattern — no external tracing library required.
 
-#### Correlation ID strategy
+#### How it works
 
-The Gateway derives `X-Correlation-ID` from the active W3C **TraceId** (set by ASP.NET Core on every incoming request once the OTel `ActivityListener` is registered) rather than generating an independent `Guid`. This means:
+| Step | Location | Behaviour |
+|------|----------|-----------|
+| 1 | **Gateway** inline middleware | Reads `X-Correlation-ID` from the incoming client request. If the header is absent, generates `Guid.NewGuid().ToString()`. Injects the header on the forwarded request (so YARP carries it to the downstream service) and echoes it on the response via `OnStarting`. |
+| 2 | **Downstream services** `CorrelationIdMiddleware` | Reads `X-Correlation-ID` forwarded by the Gateway. Falls back to a new `Guid` if missing (e.g. direct calls that bypass the Gateway). Stores the value in `HttpContext.Items` for in-process use and echoes it on the response. |
 
-- The value that appears in `X-Correlation-ID` response headers **is the same** as the trace ID visible in Jaeger / Zipkin / any OTLP-compatible backend.
-- If the client supplies a `traceparent` header, the Gateway preserves the existing trace; otherwise it starts a new one.
-- YARP forwards `traceparent` and `tracestate` to every downstream service via `ReverseProxyPropagator`.
-
-#### Per-service `CorrelationIdMiddleware`
-
-Each downstream service (CoreService, UserService, ITProvisionService, NotificationService) registers a `CorrelationIdMiddleware` that:
-
-1. Reads `X-Correlation-ID` from the incoming request (forwarded by the Gateway).
-2. Falls back to `Activity.Current?.TraceId` if the header is absent.
-3. Stores the value in `HttpContext.Items` for any handler that needs it.
-4. Echoes it back in the response via `OnStarting` (safe for streaming responses).
-
-#### Log enrichment
-
-All services configure:
-
-```csharp
-builder.Logging.Configure(options =>
-    options.ActivityTrackingOptions =
-        ActivityTrackingOptions.TraceId | ActivityTrackingOptions.SpanId);
-```
-
-Every structured log entry automatically includes `TraceId` and `SpanId` scopes, making all log lines for a single request searchable by trace ID across services.
-
-#### MassTransit tracing (free)
-
-MassTransit v8 propagates `System.Diagnostics.Activity` context through message headers automatically. When the saga publishes `ProvisionCorporateAccountCommand`, ITProvisionService's consumer starts a **child span** under the same `TraceId`. No code changes are needed — registering `AddSource("MassTransit")` in OpenTelemetry is sufficient to capture these spans.
-
-#### Adding an exporter (future)
-
-The current setup captures spans and enriches logs but does not ship traces to an external backend. When ready, add one line per service:
-
-```csharp
-// e.g. Jaeger / Zipkin / any OTLP-compatible backend
-tracing.AddOtlpExporter();
-```
+Because the Gateway injects the header before YARP proxies the request, every service in the call chain receives the **same** `X-Correlation-ID` for a given client request, making cross-service log correlation straightforward.
 
 ---
 

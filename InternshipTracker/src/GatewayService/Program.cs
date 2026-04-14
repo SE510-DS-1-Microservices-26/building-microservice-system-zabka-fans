@@ -1,7 +1,4 @@
-using System.Diagnostics;
 using GatewayService.Resilience;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 using Yarp.ReverseProxy.Forwarder;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,19 +11,6 @@ builder.Services.Configure<ResilienceOptions>(
     builder.Configuration.GetSection(ResilienceOptions.SectionName));
 builder.Services.AddSingleton<IForwarderHttpClientFactory, ResilientForwarderHttpClientFactory>();
 
-// OpenTelemetry: register the ASP.NET Core instrumentation so that
-// Activity.Current is populated for every request, which lets the
-// correlation-ID middleware below derive the ID from the W3C TraceId.
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing => tracing
-        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("GatewayService"))
-        .AddAspNetCoreInstrumentation());
-
-// Enrich every structured log entry with the active TraceId / SpanId.
-builder.Logging.Configure(options =>
-    options.ActivityTrackingOptions =
-        ActivityTrackingOptions.TraceId | ActivityTrackingOptions.SpanId);
-
 var app = builder.Build();
 
 app.UseSwaggerUI(options =>
@@ -38,18 +22,17 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = "swagger";
 });
 
-// Correlation ID middleware: derive from W3C TraceId so the value echoed in
-// response headers is identical to the trace ID visible in any tracing tool.
+// Correlation ID: if the caller does not supply X-Correlation-ID, generate a
+// new one and forward it on the proxied request so every downstream service
+// receives the same ID for the full request chain.
 app.Use(async (context, next) =>
 {
     const string correlationIdHeader = "X-Correlation-ID";
 
     var correlationId =
         context.Request.Headers[correlationIdHeader].FirstOrDefault()
-        ?? Activity.Current?.TraceId.ToString()
-        ?? Guid.NewGuid().ToString("N");
+        ?? Guid.NewGuid().ToString();
 
-    // Ensure downstream services receive the header via YARP forwarding.
     if (!context.Request.Headers.ContainsKey(correlationIdHeader))
         context.Request.Headers[correlationIdHeader] = correlationId;
 
