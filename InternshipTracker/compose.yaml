@@ -57,11 +57,19 @@
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+      RABBITMQ_MANAGEMENT_PATH_PREFIX: "/rabbitmq"
     ports:
       - "5672:5672"
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+  jaeger:
+    image: jaegertracing/jaeger:latest
+    command: ["--query.base-path=/jaeger"]
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
 
 
   # application services
@@ -75,12 +83,17 @@
         condition: service_healthy
       rabbitmq:
         condition: service_started
+      jaeger:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__UsersDb: "Host=user-db;Port=5432;Database=user_db;Username=postgres;Password=Password123!"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "user-service"
   core:
     image: internship-tracker/core-service:${APP_TAG:-latest}
     build:
@@ -97,6 +110,8 @@
         condition: service_started
       notification:
         condition: service_started
+      jaeger:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__CoreDb: "Host=core-db;Port=5432;Database=core_db;Username=postgres;Password=Password123!"
@@ -104,6 +119,9 @@
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "core-service"
   it-provision:
     image: internship-tracker/it-provision-service:${APP_TAG:-latest}
     build:
@@ -114,12 +132,17 @@
         condition: service_healthy
       rabbitmq:
         condition: service_started
+      jaeger:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__ITProvisionDb: "Host=it-provision-db;Port=5432;Database=it_provision_db;Username=postgres;Password=Password123!"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "it-provision-service"
   notification:
     image: internship-tracker/notification-service:${APP_TAG:-latest}
     build:
@@ -130,12 +153,17 @@
         condition: service_healthy
       rabbitmq:
         condition: service_started
+      jaeger:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__NotificationDb: "Host=notification-db;Port=5432;Database=notification_db;Username=postgres;Password=Password123!"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "notification-service"
   gateway:
     image: internship-tracker/gateway-service:${APP_TAG:-latest}
     build:
@@ -146,6 +174,7 @@
         - users
         - it-provision
         - notification
+        - jaeger
     ports:
       - "8000:8080"
     environment:
@@ -154,6 +183,11 @@
       ReverseProxy__Clusters__users__Destinations__default__Address: "http://users:8080"
       ReverseProxy__Clusters__it-provision__Destinations__default__Address: "http://it-provision:8080"
       ReverseProxy__Clusters__notification__Destinations__default__Address: "http://notification:8080"
+      ReverseProxy__Clusters__rabbitmq__Destinations__default__Address: "http://rabbitmq:15672"
+      ReverseProxy__Clusters__jaeger__Destinations__default__Address: "http://jaeger:16686"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "gateway-service"
 
 volumes:
   core_data:
