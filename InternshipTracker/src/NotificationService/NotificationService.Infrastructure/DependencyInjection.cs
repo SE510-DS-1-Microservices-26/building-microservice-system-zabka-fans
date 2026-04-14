@@ -2,7 +2,7 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using NotificationService.Application.Consumers;
+using NotificationService.Infrastructure.Consumers;
 using NotificationService.Infrastructure.Hosting;
 using NotificationService.Infrastructure.Persistence;
 

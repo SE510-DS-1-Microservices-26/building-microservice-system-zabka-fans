@@ -297,48 +297,70 @@ minikube start
 minikube addons enable ingress
 ```
 
-### Build Docker Images
+### Build and Deploy with Make (recommended)
 
-Point Docker to minikube's daemon and build all service images:
+A `Makefile` at the repository root automates image building and deployment. Each image is
+tagged with `APP_VERSION-<git-sha>` (e.g. `v1.0.0-a1b2c3d`) and the Kustomize overlay in
+`k8s/kustomization.yaml` is updated in-place before applying.
 
-```bash
-# On Windows (Git Bash)
-minikube docker-env --shell bash | source /dev/stdin
+**Prerequisites:** `make`, `minikube`, `kubectl`, `kustomize`, Docker.
 
-# On Linux / macOS
-eval $(minikube docker-env)
-```
+#### macOS / Linux
 
-Build from the `InternshipTracker/` directory:
+Run from the repository root:
 
 ```bash
-cd InternshipTracker
-
-docker build -t internship-tracker/core-service:latest -f src/CoreService/CoreService.Api/Dockerfile .
-docker build -t internship-tracker/user-service:latest -f src/UserService/UserService.Api/Dockerfile .
-docker build -t internship-tracker/it-provision-service:latest -f src/ITProvisionService/ITProvisionService.Api/Dockerfile .
-docker build -t internship-tracker/notification-service:latest -f src/NotificationService/NotificationService.Api/Dockerfile .
-docker build -t internship-tracker/gateway-service:latest -f src/GatewayService/Dockerfile .
+# Override the version tag if needed:
+make APP_VERSION=v2.0.0
 ```
-
-Alternatively, build locally and load into minikube:
 
 ```bash
-minikube image load internship-tracker/core-service:latest
-minikube image load internship-tracker/user-service:latest
-minikube image load internship-tracker/it-provision-service:latest
-minikube image load internship-tracker/notification-service:latest
-minikube image load internship-tracker/gateway-service:latest
+# Build all images inside minikube's Docker daemon and deploy
+make
+
+# Or run steps separately:
+make build-all    # eval $(minikube docker-env) + docker compose build
+make deploy-all   # kustomize edit set image + kubectl apply -k k8s/
 ```
 
-### Deploy
+#### Windows (WSL required)
+
+The `build-all` target runs `eval $(minikube docker-env)` to redirect Docker to
+minikube's daemon. This works correctly only in a real bash environment. **WSL
+(Windows Subsystem for Linux)** provides that environment and is the only
+supported path on Windows.
+
+> **Git Bash / PowerShell / CMD are not supported** for `make build-all` because
+> Git Bash's minimal bash implementation does not reliably export the docker
+> environment variables produced by `eval $(minikube docker-env)`, and
+> PowerShell/CMD lack both `make` and `eval` entirely.
+
+Install WSL (Ubuntu is fine), then run from the repository root inside the WSL
+terminal:
+
+```bash
+# WSL – build all images inside minikube's Docker daemon and deploy
+make
+
+# Or run steps separately:
+make build-all
+make deploy-all
+
+# Override the version tag if needed:
+make APP_VERSION=v2.0.0
+```
+
+Make sure `minikube`, `kubectl`, `kustomize`, and `docker` are available inside
+the WSL environment (install them the same way as on Linux).
+
+### Deploy (manual / without Make)
 
 ```bash
 # Apply namespace first (other resources depend on it)
 kubectl apply -f k8s/namespace.yaml
 
-# Apply all manifests
-kubectl apply -f k8s/
+# Apply all manifests via Kustomize
+kubectl apply -k k8s/
 ```
 
 ### Verify
@@ -430,6 +452,16 @@ k8s/
 ```
 
 ### Teardown
+
+```bash
+# macOS / Linux – stop Docker redirection to minikube
+eval $(minikube docker-env --unset)
+```
+
+```powershell
+# Windows PowerShell – stop Docker redirection to minikube
+& minikube docker-env --unset --shell powershell | Invoke-Expression
+```
 
 ```bash
 kubectl delete namespace internship-tracker

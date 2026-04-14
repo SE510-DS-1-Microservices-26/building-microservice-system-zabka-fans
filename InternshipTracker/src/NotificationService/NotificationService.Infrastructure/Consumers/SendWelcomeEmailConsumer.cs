@@ -3,7 +3,7 @@ using Contracts.Events;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace NotificationService.Application.Consumers;
+namespace NotificationService.Infrastructure.Consumers;
 
 public class SendWelcomeEmailConsumer : IConsumer<SendWelcomeEmailCommand>
 {
