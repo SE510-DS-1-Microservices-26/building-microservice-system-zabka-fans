@@ -57,7 +57,6 @@
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
-      RABBITMQ_MANAGEMENT_PATH_PREFIX: "/rabbitmq"
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -183,8 +182,6 @@
       ReverseProxy__Clusters__users__Destinations__default__Address: "http://users:8080"
       ReverseProxy__Clusters__it-provision__Destinations__default__Address: "http://it-provision:8080"
       ReverseProxy__Clusters__notification__Destinations__default__Address: "http://notification:8080"
-      ReverseProxy__Clusters__rabbitmq__Destinations__default__Address: "http://rabbitmq:15672"
-      ReverseProxy__Clusters__jaeger__Destinations__default__Address: "http://jaeger:16686"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
       OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
       OTEL_SERVICE_NAME: "gateway-service"

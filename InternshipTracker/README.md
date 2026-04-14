@@ -59,7 +59,7 @@ The Domain layer has no external dependencies.
 
 **NotificationService** -- Leaf service backed by its own `notification_db` PostgreSQL database. Consumes `SendWelcomeEmailCommand` from the saga, simulates sending a welcome email, and replies with `EmailSentEvent` or `EmailSendingFailedEvent`. Uses a MassTransit EF Core transactional outbox to guarantee reliable event publishing. Exposes Swagger for API documentation.
 
-**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check and Swagger routes are exposed for every downstream service (Core, Users, IT Provision, Notification). Aggregated Swagger UI at `/swagger`. Wraps every proxied request with a **Polly resilience pipeline** (circuit breaker → retry → per-attempt timeout) via a custom `IForwarderHttpClientFactory`. Propagates `X-Correlation-ID` from the incoming client request, or generates a new `Guid` if the header is absent, and forwards it to every downstream service so the same ID flows through the entire request chain. Also proxies the **RabbitMQ Management UI** (`/rabbitmq/`) and the **Jaeger tracing UI** (`/jaeger/`) so both dashboards are reachable through a single entry point without extra Ingress rules.
+**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check and Swagger routes are exposed for every downstream service (Core, Users, IT Provision, Notification). Aggregated Swagger UI at `/swagger`. Wraps every proxied request with a **Polly resilience pipeline** (circuit breaker → retry → per-attempt timeout) via a custom `IForwarderHttpClientFactory`. Propagates `X-Correlation-ID` from the incoming client request, or generates a new `Guid` if the header is absent, and forwards it to every downstream service so the same ID flows through the entire request chain.
 
 **Contracts** -- Shared class library (no dependencies) referenced by every service. Contains all MassTransit event and command record types so message schemas match exactly across the bus.
 
@@ -301,8 +301,8 @@ Three consumers in `CoreService.Infrastructure/Messaging/Consumers/` react to sa
    ```
 
    The API will be available at `http://localhost:8000`.
-   RabbitMQ management UI is at `http://localhost:8000/rabbitmq/` (guest/guest).
-   Jaeger tracing UI is at `http://localhost:8000/jaeger/`.
+   RabbitMQ management UI is at `http://localhost:15672` (guest/guest).
+   Jaeger tracing UI is at `http://localhost:16686`.
 
 3. Stop:
    ```bash
@@ -499,54 +499,24 @@ kubectl delete namespace internship-tracker
 minikube stop
 ```
 
-## Infrastructure Services
+## Accessing Infrastructure Services
 
-Infrastructure services (brokers, dashboards, admin UIs) are exposed through the YARP Gateway under dedicated path prefixes. All traffic — including these — enters the cluster via the single nginx Ingress and is routed by the Gateway. No separate Ingress rules are needed for infra services.
+RabbitMQ and Jaeger are internal cluster services — they are **not** exposed via the Gateway or Ingress. Access them directly during development using `kubectl port-forward`:
 
-| Service             | Path prefix    | Access URL (Kubernetes)                            | Access URL (Docker Compose)              |
-|---------------------|----------------|----------------------------------------------------|------------------------------------------|
-| RabbitMQ Management | `/rabbitmq/`   | `http://internship-tracker.local/rabbitmq/`        | `http://localhost:8000/rabbitmq/`        |
-| Jaeger Tracing UI   | `/jaeger/`     | `http://internship-tracker.local/jaeger/`          | `http://localhost:8000/jaeger/`          |
+```bash
+# RabbitMQ management UI → http://localhost:15672  (guest / guest)
+kubectl port-forward -n internship-tracker svc/rabbitmq 15672:15672
 
-### RabbitMQ Management UI
-
-The RabbitMQ management dashboard is proxied by the Gateway via the `rabbitmq-management-route` YARP route, which forwards all `/rabbitmq/{**catch-all}` traffic to the `rabbitmq` cluster (port `15672`).
-
-The `RABBITMQ_MANAGEMENT_PATH_PREFIX=/rabbitmq` environment variable is set on the RabbitMQ container so that the management UI generates all its internal asset and API links under the `/rabbitmq/` prefix. Without this, the UI's JavaScript would request assets from `/` and break when accessed through the prefixed path.
-
-**Kubernetes:**
-```
-http://internship-tracker.local/rabbitmq/
+# Jaeger tracing UI → http://localhost:16686
+kubectl port-forward -n internship-tracker svc/jaeger 16686:16686
 ```
 
-**Docker Compose (direct, bypassing YARP):**
-```
-http://localhost:15672/rabbitmq/
-```
+In **Docker Compose** both ports are mapped directly on `localhost`:
 
-Default credentials: `guest` / `guest` (set via `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS`).
-
-> **Note:** The Polly resilience pipeline (retry, circuit breaker, timeout) in the Gateway applies to all proxied routes including `/rabbitmq/`. The management UI uses WebSockets for live stats — if the connection is held open longer than the configured `TimeoutSeconds` (default 10 s) it will be terminated. For real-time dashboard use, consider raising `Resilience__TimeoutSeconds` via an environment variable override or accessing RabbitMQ directly on port `15672` during local development.
-
-### Jaeger Tracing UI
-
-The Jaeger query UI is proxied by the Gateway via the `jaeger-ui-route` YARP route, which forwards all `/jaeger/{**catch-all}` traffic to the `jaeger` cluster (port `16686`).
-
-Jaeger is started with the `--query.base-path=/jaeger` flag so its internal asset and API links are prefix-aware and render correctly through the Gateway.
-
-Traces are received by Jaeger over OTLP gRPC on port `4317`. All five application services (`gateway-service`, `core-service`, `user-service`, `it-provision-service`, `notification-service`) export spans automatically — no manual instrumentation of business logic is required.
-
-**Kubernetes:**
-```
-http://internship-tracker.local/jaeger/
-```
-
-**Docker Compose:**
-```
-http://localhost:8000/jaeger/
-```
-
-> **Note:** The same Polly timeout caveat applies here — the Jaeger UI uses long-polling for some operations. Raise `Resilience__TimeoutSeconds` if UI interactions feel sluggish, or access Jaeger directly on port `16686` during local development.
+| Service | URL |
+|---|---|
+| RabbitMQ Management | `http://localhost:15672` (guest / guest) |
+| Jaeger UI | `http://localhost:16686` |
 
 ---
 

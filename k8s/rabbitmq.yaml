@@ -31,8 +31,6 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: RabbitMQ__Password
-            - name: RABBITMQ_MANAGEMENT_PATH_PREFIX
-              value: "/rabbitmq"
           resources:
             requests:
               cpu: "100m"
