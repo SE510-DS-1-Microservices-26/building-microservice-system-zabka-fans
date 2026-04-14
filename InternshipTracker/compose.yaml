@@ -66,6 +66,7 @@
 
   # application services
   users:
+    image: internship-tracker/user-service:${APP_TAG:-latest}
     build:
       context: .
       dockerfile: src/UserService/UserService.Api/Dockerfile
@@ -81,6 +82,7 @@
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
   core:
+    image: internship-tracker/core-service:${APP_TAG:-latest}
     build:
       context: .
       dockerfile: src/CoreService/CoreService.Api/Dockerfile
@@ -103,6 +105,7 @@
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
   it-provision:
+    image: internship-tracker/it-provision-service:${APP_TAG:-latest}
     build:
       context: .
       dockerfile: src/ITProvisionService/ITProvisionService.Api/Dockerfile
@@ -118,6 +121,7 @@
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
   notification:
+    image: internship-tracker/notification-service:${APP_TAG:-latest}
     build:
       context: .
       dockerfile: src/NotificationService/NotificationService.Api/Dockerfile
@@ -133,6 +137,7 @@
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASS}
   gateway:
+    image: internship-tracker/gateway-service:${APP_TAG:-latest}
     build:
       context: .
       dockerfile: src/GatewayService/Dockerfile
