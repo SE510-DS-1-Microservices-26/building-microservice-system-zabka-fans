@@ -59,7 +59,7 @@ The Domain layer has no external dependencies.
 
 **NotificationService** -- Leaf service backed by its own `notification_db` PostgreSQL database. Consumes `SendWelcomeEmailCommand` from the saga, simulates sending a welcome email, and replies with `EmailSentEvent` or `EmailSendingFailedEvent`. Uses a MassTransit EF Core transactional outbox to guarantee reliable event publishing. Exposes Swagger for API documentation.
 
-**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check and Swagger routes are exposed for every downstream service (Core, Users, IT Provision, Notification). Aggregated Swagger UI at `/swagger`. Injects an `X-Correlation-ID` header on every request.
+**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check and Swagger routes are exposed for every downstream service (Core, Users, IT Provision, Notification). Aggregated Swagger UI at `/swagger`. Wraps every proxied request with a **Polly resilience pipeline** (circuit breaker → retry → per-attempt timeout) via a custom `IForwarderHttpClientFactory`. Derives the `X-Correlation-ID` response header from the active W3C `TraceId` so that the correlation ID is identical to the trace ID visible in any tracing tool.
 
 **Contracts** -- Shared class library (no dependencies) referenced by every service. Contains all MassTransit event and command record types so message schemas match exactly across the bus.
 
@@ -94,6 +94,83 @@ How it works:
 | UserService          | `user_db`          | `UserDbContext`         |
 | ITProvisionService   | `it_provision_db`  | `ITProvisionDbContext`  |
 | NotificationService  | `notification_db`  | `NotificationDbContext` |
+
+### Resilience (Gateway — Polly)
+
+Every request forwarded by the Gateway passes through a Polly **resilience pipeline** implemented via a custom `IForwarderHttpClientFactory` (`ResilientForwarderHttpClientFactory`). The pipeline layers wrap the actual `SocketsHttpHandler` in the following order (outer → inner):
+
+```
+Circuit Breaker → Retry → Timeout (per-attempt) → SocketsHttpHandler
+```
+
+| Policy | Behaviour |
+|---|---|
+| **Circuit Breaker** | Opens after ≥ 50 % failure rate across ≥ 5 requests in a 60 s sampling window. Stays open for 30 s, then half-opens to probe one request. Only counts failures **after all retries have been exhausted**, so a single flaky request does not trip the breaker. |
+| **Retry** | Up to 3 attempts with exponential back-off (base 1 s) + jitter. Retries on `HttpRequestException` (network errors) and HTTP 502 / 503 / 504 status codes. Does **not** retry timeouts or 4xx responses. |
+| **Timeout** | 10 s per individual attempt. A timed-out attempt is counted as a failure by the circuit breaker but is not retried. |
+
+All three policies log structured events (`LogWarning` for retries and timeouts, `LogError` when the circuit opens) with the cluster ID so failures are traceable in dashboards.
+
+Tune the defaults without redeploying by changing the `Resilience` section in `appsettings.json`:
+
+```json
+"Resilience": {
+  "TimeoutSeconds": 10,
+  "Retry": { "MaxAttempts": 3, "BaseDelaySeconds": 1 },
+  "CircuitBreaker": {
+    "MinimumThroughput": 5,
+    "FailureRatio": 0.5,
+    "BreakDurationSeconds": 30,
+    "SamplingDurationSeconds": 60
+  }
+}
+```
+
+### Distributed Tracing & Correlation IDs
+
+All five services are wired with **OpenTelemetry** (`OpenTelemetry.Extensions.Hosting` + `OpenTelemetry.Instrumentation.AspNetCore` v1.12.0).
+
+#### Correlation ID strategy
+
+The Gateway derives `X-Correlation-ID` from the active W3C **TraceId** (set by ASP.NET Core on every incoming request once the OTel `ActivityListener` is registered) rather than generating an independent `Guid`. This means:
+
+- The value that appears in `X-Correlation-ID` response headers **is the same** as the trace ID visible in Jaeger / Zipkin / any OTLP-compatible backend.
+- If the client supplies a `traceparent` header, the Gateway preserves the existing trace; otherwise it starts a new one.
+- YARP forwards `traceparent` and `tracestate` to every downstream service via `ReverseProxyPropagator`.
+
+#### Per-service `CorrelationIdMiddleware`
+
+Each downstream service (CoreService, UserService, ITProvisionService, NotificationService) registers a `CorrelationIdMiddleware` that:
+
+1. Reads `X-Correlation-ID` from the incoming request (forwarded by the Gateway).
+2. Falls back to `Activity.Current?.TraceId` if the header is absent.
+3. Stores the value in `HttpContext.Items` for any handler that needs it.
+4. Echoes it back in the response via `OnStarting` (safe for streaming responses).
+
+#### Log enrichment
+
+All services configure:
+
+```csharp
+builder.Logging.Configure(options =>
+    options.ActivityTrackingOptions =
+        ActivityTrackingOptions.TraceId | ActivityTrackingOptions.SpanId);
+```
+
+Every structured log entry automatically includes `TraceId` and `SpanId` scopes, making all log lines for a single request searchable by trace ID across services.
+
+#### MassTransit tracing (free)
+
+MassTransit v8 propagates `System.Diagnostics.Activity` context through message headers automatically. When the saga publishes `ProvisionCorporateAccountCommand`, ITProvisionService's consumer starts a **child span** under the same `TraceId`. No code changes are needed — registering `AddSource("MassTransit")` in OpenTelemetry is sufficient to capture these spans.
+
+#### Adding an exporter (future)
+
+The current setup captures spans and enriches logs but does not ship traces to an external backend. When ready, add one line per service:
+
+```csharp
+// e.g. Jaeger / Zipkin / any OTLP-compatible backend
+tracing.AddOtlpExporter();
+```
 
 ---
 
