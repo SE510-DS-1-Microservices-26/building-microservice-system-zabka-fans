@@ -6,7 +6,12 @@ metadata:
   labels:
     app: core-service
 spec:
-  replicas: 1
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: core-service
@@ -52,12 +57,24 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ASPNETCORE_ENVIRONMENT
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: OTEL_EXPORTER_OTLP_ENDPOINT
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: OTEL_EXPORTER_OTLP_PROTOCOL
+            - name: OTEL_SERVICE_NAME
+              value: "core-service"
           resources:
             requests:
               cpu: "100m"
               memory: "128Mi"
             limits:
-              cpu: "250m"
+              cpu: "300m"
               memory: "256Mi"
           readinessProbe:
             httpGet:

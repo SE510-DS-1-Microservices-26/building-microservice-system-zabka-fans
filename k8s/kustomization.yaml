@@ -15,20 +15,21 @@ resources:
 - it-provision-service.yaml
 - notification-service.yaml
 - gateway-service.yaml
+- jaeger.yaml
 - ingress.yaml
 images:
 - name: internship-tracker/core-service
   newName: internship-tracker/core-service
-  newTag: v1.0.1-3a45d48
+  newTag: v1.0.4-e58beea
 - name: internship-tracker/gateway-service
   newName: internship-tracker/gateway-service
-  newTag: v1.0.1-3a45d48
+  newTag: v1.0.4-e58beea
 - name: internship-tracker/it-provision-service
   newName: internship-tracker/it-provision-service
-  newTag: v1.0.1-3a45d48
+  newTag: v1.0.4-e58beea
 - name: internship-tracker/notification-service
   newName: internship-tracker/notification-service
-  newTag: v1.0.1-3a45d48
+  newTag: v1.0.4-e58beea
 - name: internship-tracker/user-service
   newName: internship-tracker/user-service
-  newTag: v1.0.1-3a45d48
+  newTag: v1.0.4-e58beea

@@ -8,6 +8,7 @@ data:
   ReverseProxy__Clusters__users__Destinations__default__Address: "http://user-service:8080"
   ReverseProxy__Clusters__it-provision__Destinations__default__Address: "http://it-provision-service:8080"
   ReverseProxy__Clusters__notification__Destinations__default__Address: "http://notification-service:8080"
+  ReverseProxy__Clusters__jaeger__Destinations__default__Address: "http://jaeger:16686"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -18,6 +19,11 @@ metadata:
     app: gateway-service
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: gateway-service
@@ -41,12 +47,24 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ASPNETCORE_ENVIRONMENT
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: OTEL_EXPORTER_OTLP_ENDPOINT
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: OTEL_EXPORTER_OTLP_PROTOCOL
+            - name: OTEL_SERVICE_NAME
+              value: "gateway-service"
           resources:
             requests:
               cpu: "100m"
               memory: "128Mi"
             limits:
-              cpu: "250m"
+              cpu: "300m"
               memory: "256Mi"
           readinessProbe:
             httpGet:

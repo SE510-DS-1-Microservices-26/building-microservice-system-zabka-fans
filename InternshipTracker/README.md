@@ -59,7 +59,7 @@ The Domain layer has no external dependencies.
 
 **NotificationService** -- Leaf service backed by its own `notification_db` PostgreSQL database. Consumes `SendWelcomeEmailCommand` from the saga, simulates sending a welcome email, and replies with `EmailSentEvent` or `EmailSendingFailedEvent`. Uses a MassTransit EF Core transactional outbox to guarantee reliable event publishing. Exposes Swagger for API documentation.
 
-**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check and Swagger routes are exposed for every downstream service (Core, Users, IT Provision, Notification). Aggregated Swagger UI at `/swagger`. Injects an `X-Correlation-ID` header on every request.
+**GatewayService** -- YARP reverse proxy. Single entry point for all clients (port `8000`). Routes read requests for users (`GET /users`) to CoreService and write requests (`POST`, `DELETE /users`) to UserService. All internship and application traffic is routed to CoreService. Health-check and Swagger routes are exposed for every downstream service (Core, Users, IT Provision, Notification). Aggregated Swagger UI at `/swagger`. Wraps every proxied request with a **Polly resilience pipeline** (circuit breaker → retry → per-attempt timeout) via a custom `IForwarderHttpClientFactory`. Propagates `X-Correlation-ID` from the incoming client request, or generates a new `Guid` if the header is absent, and forwards it to every downstream service so the same ID flows through the entire request chain.
 
 **Contracts** -- Shared class library (no dependencies) referenced by every service. Contains all MassTransit event and command record types so message schemas match exactly across the bus.
 
@@ -94,6 +94,79 @@ How it works:
 | UserService          | `user_db`          | `UserDbContext`         |
 | ITProvisionService   | `it_provision_db`  | `ITProvisionDbContext`  |
 | NotificationService  | `notification_db`  | `NotificationDbContext` |
+
+### Resilience (Gateway — Polly)
+
+Every request forwarded by the Gateway passes through a Polly **resilience pipeline** implemented via a custom `IForwarderHttpClientFactory` (`ResilientForwarderHttpClientFactory`). The pipeline layers wrap the actual `SocketsHttpHandler` in the following order (outer → inner):
+
+```
+Circuit Breaker → Retry → Timeout (per-attempt) → SocketsHttpHandler
+```
+
+| Policy | Behaviour |
+|---|---|
+| **Circuit Breaker** | Opens after ≥ 50 % failure rate across ≥ 5 requests in a 60 s sampling window. Stays open for 30 s, then half-opens to probe one request. Only counts failures **after all retries have been exhausted**, so a single flaky request does not trip the breaker. |
+| **Retry** | Up to 3 attempts with exponential back-off (base 1 s) + jitter. Retries on `HttpRequestException` (network errors) and HTTP 502 / 503 / 504 status codes. Does **not** retry timeouts or 4xx responses. |
+| **Timeout** | 10 s per individual attempt. A timed-out attempt is counted as a failure by the circuit breaker but is not retried. |
+
+All three policies log structured events (`LogWarning` for retries and timeouts, `LogError` when the circuit opens) with the cluster ID so failures are traceable in dashboards.
+
+Tune the defaults without redeploying by changing the `Resilience` section in `appsettings.json`:
+
+```json
+"Resilience": {
+  "TimeoutSeconds": 10,
+  "Retry": { "MaxAttempts": 3, "BaseDelaySeconds": 1 },
+  "CircuitBreaker": {
+    "MinimumThroughput": 5,
+    "FailureRatio": 0.5,
+    "BreakDurationSeconds": 30,
+    "SamplingDurationSeconds": 60
+  }
+}
+```
+
+### Correlation IDs
+
+The system uses a lightweight, header-based correlation ID pattern — no external tracing library required.
+
+#### How it works
+
+| Step | Location | Behaviour |
+|------|----------|-----------|
+| 1 | **Gateway** inline middleware | Reads `X-Correlation-ID` from the incoming client request. If the header is absent, generates `Guid.NewGuid().ToString()`. Injects the header on the forwarded request (so YARP carries it to the downstream service) and echoes it on the response via `OnStarting`. |
+| 2 | **Downstream services** `CorrelationIdMiddleware` | Reads `X-Correlation-ID` forwarded by the Gateway. Falls back to a new `Guid` if missing (e.g. direct calls that bypass the Gateway). Stores the value in `HttpContext.Items` for in-process use and echoes it on the response. |
+
+Because the Gateway injects the header before YARP proxies the request, every service in the call chain receives the **same** `X-Correlation-ID` for a given client request, making cross-service log correlation straightforward.
+
+### Distributed Tracing (OpenTelemetry → Jaeger)
+
+Every service is instrumented with the **OpenTelemetry .NET SDK** and exports traces via OTLP gRPC to **Jaeger**. No Jaeger-specific client libraries are used — the OTLP exporter is vendor-neutral.
+
+#### Instrumentation
+
+| Package | Instruments |
+|---|---|
+| `OpenTelemetry.Instrumentation.AspNetCore` | Incoming HTTP requests (server spans) |
+| `OpenTelemetry.Instrumentation.Http` | Outgoing `HttpClient` calls (client spans) |
+| `AddSource("MassTransit")` | MassTransit publish/consume/saga spans (built-in ActivitySource) |
+| `OpenTelemetry.Exporter.OpenTelemetryProtocol` | OTLP gRPC export to Jaeger |
+
+The exporter endpoint and service name are configured entirely through environment variables — no URLs are hardcoded:
+
+| Variable | Value (Kubernetes) | Value (Docker Compose) |
+|---|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://jaeger:4318` | `http://jaeger:4317` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` | `grpc` |
+| `OTEL_SERVICE_NAME` | e.g. `core-service` | e.g. `core-service` |
+
+The Jaeger UI is proxied by the Gateway via the `jaeger-ui-route` YARP route (`/jaeger/{**catch-all}`). Jaeger is started with `--query.base-path=/jaeger` so all its internal asset and API links are prefix-aware.
+
+#### What you can trace
+
+- Full HTTP request chain: Gateway → CoreService → UserService (via HttpClient)
+- Saga flows: `OnboardingStartedEvent` → `ProvisionCorporateAccountCommand` → `AccountProvisionedEvent` → `SendWelcomeEmailCommand` → `FinalizeEnrollmentCommand` visible as linked MassTransit spans across services
+- The existing `X-Correlation-ID` header travels alongside the W3C `traceparent` header — both are propagated independently
 
 ---
 
@@ -229,6 +302,7 @@ Three consumers in `CoreService.Infrastructure/Messaging/Consumers/` react to sa
 
    The API will be available at `http://localhost:8000`.
    RabbitMQ management UI is at `http://localhost:15672` (guest/guest).
+   Jaeger tracing UI is at `http://localhost:16686`.
 
 3. Stop:
    ```bash
@@ -308,6 +382,36 @@ make APP_VERSION=v2.0.0
 
 Make sure `minikube`, `kubectl`, `kustomize`, and `docker` are available inside
 the WSL environment (install them the same way as on Linux).
+
+#### Windows (Git Bash — manual, without Make)
+
+If you don't have WSL, you can build manually in Git Bash by pointing Docker to
+minikube's daemon and building each image:
+
+```bash
+minikube docker-env --shell bash | source /dev/stdin
+cd InternshipTracker
+
+docker build --no-cache -t internship-tracker/core-service:v2 -f src/CoreService/CoreService.Api/Dockerfile .
+docker build --no-cache -t internship-tracker/user-service:v2 -f src/UserService/UserService.Api/Dockerfile .
+docker build --no-cache -t internship-tracker/it-provision-service:v2 -f src/ITProvisionService/ITProvisionService.Api/Dockerfile .
+docker build --no-cache -t internship-tracker/notification-service:v2 -f src/NotificationService/NotificationService.Api/Dockerfile .
+docker build --no-cache -t internship-tracker/gateway-service:v2 -f src/GatewayService/Dockerfile .
+```
+
+> **Important:** Use `--no-cache` to avoid Docker layer caching issues when
+> packages have changed between branches. Use a versioned tag (e.g. `:v2`)
+> instead of `:latest` so Kubernetes picks up the new image.
+
+Then update the deployments:
+
+```bash
+kubectl set image deployment/core-service core-service=internship-tracker/core-service:v2 -n internship-tracker
+kubectl set image deployment/user-service user-service=internship-tracker/user-service:v2 -n internship-tracker
+kubectl set image deployment/it-provision-service it-provision-service=internship-tracker/it-provision-service:v2 -n internship-tracker
+kubectl set image deployment/notification-service notification-service=internship-tracker/notification-service:v2 -n internship-tracker
+kubectl set image deployment/gateway-service gateway-service=internship-tracker/gateway-service:v2 -n internship-tracker
+```
 
 ### Deploy (manual / without Make)
 
@@ -392,20 +496,91 @@ Test the compensation path: if ITProvisionService fails during onboarding, the s
 ```
 k8s/
 ├── namespace.yaml              # internship-tracker namespace
-├── configmap.yaml              # Shared config (RabbitMQ host, service URLs)
+├── configmap.yaml              # Shared config (RabbitMQ host, service URLs, OTEL endpoint)
 ├── secret.yaml                 # Database passwords, connection strings
 ├── rabbitmq.yaml               # Deployment + Service (AMQP + management UI)
+├── jaeger.yaml                 # Deployment + Service (OTLP gRPC/HTTP + query UI)
 ├── postgres-core.yaml          # StatefulSet + PVC + headless Service
 ├── postgres-users.yaml         # StatefulSet + PVC + headless Service
 ├── postgres-it-provision.yaml  # StatefulSet + PVC + headless Service
 ├── postgres-notification.yaml  # StatefulSet + PVC + headless Service
-├── core-service.yaml           # Deployment + Service
+├── core-service.yaml           # Deployment (3 replicas) + Service
 ├── user-service.yaml           # Deployment + Service
 ├── it-provision-service.yaml   # Deployment + Service
 ├── notification-service.yaml   # Deployment + Service
 ├── gateway-service.yaml        # ConfigMap (YARP overrides) + Deployment + Service
+├── hpa-core-service.yaml       # HorizontalPodAutoscaler for CoreService
 └── ingress.yaml                # nginx Ingress → Gateway
 ```
+
+### Scaling
+
+CoreService runs with **3 replicas** by default. Other services run with 1 replica but can be scaled the same way.
+
+Scale manually:
+
+```bash
+# Scale CoreService to 5 replicas
+kubectl scale deploy core-service -n internship-tracker --replicas=5
+
+# Verify pods are running across replicas
+kubectl get pods -n internship-tracker -l app=core-service
+```
+
+An optional **HorizontalPodAutoscaler** (`hpa-core-service.yaml`) auto-scales CoreService between 2–5 replicas based on CPU utilization (target: 70%). To enable it:
+
+```bash
+# Enable metrics-server in minikube (required for HPA)
+minikube addons enable metrics-server
+
+# Apply the HPA
+kubectl apply -f k8s/hpa-core-service.yaml
+
+# Check HPA status
+kubectl get hpa -n internship-tracker
+```
+
+### Rolling Updates and Rollbacks
+
+All Deployments use a `RollingUpdate` strategy. CoreService is configured with `maxUnavailable: 1, maxSurge: 1` to allow one pod to be replaced at a time. Other services use `maxUnavailable: 0, maxSurge: 1` for zero-downtime updates.
+
+Perform a rolling update:
+
+```bash
+# Update CoreService image to a new version
+kubectl set image deployment/core-service core-service=internship-tracker/core-service:v2 \
+  -n internship-tracker
+
+# Watch the rollout progress
+kubectl rollout status deployment/core-service -n internship-tracker
+```
+
+Roll back if something goes wrong:
+
+```bash
+# Undo the last rollout
+kubectl rollout undo deployment/core-service -n internship-tracker
+
+# Check rollout history
+kubectl rollout history deployment/core-service -n internship-tracker
+```
+
+### Resource Management
+
+Every pod has CPU and memory requests/limits configured:
+
+| Component | CPU Request | CPU Limit | Memory Request | Memory Limit |
+|---|---|---|---|---|
+| Application services | 100m | 300m | 128Mi | 256Mi |
+| PostgreSQL (each) | 100m | 250m | 128Mi | 256Mi |
+| RabbitMQ | 100m | 500m | 256Mi | 512Mi |
+| Jaeger | 100m | 500m | 128Mi | 512Mi |
+
+All services include readiness and liveness probes:
+- **Application services**: HTTP GET `/health` on port 8080
+- **PostgreSQL**: `pg_isready` exec probe
+- **RabbitMQ**: TCP socket check on port 5672
+- **Jaeger**: HTTP GET `/jaeger/` on port 16686
 
 ### Teardown
 
@@ -423,6 +598,31 @@ eval $(minikube docker-env --unset)
 kubectl delete namespace internship-tracker
 minikube stop
 ```
+
+## Accessing Infrastructure Services
+
+**Jaeger UI** is accessible through the Gateway at `/jaeger/`:
+
+| Environment | Jaeger URL |
+|---|---|
+| Kubernetes (via Ingress) | `http://internship-tracker.local/jaeger/` |
+| Docker Compose | `http://localhost:8000/jaeger/` or `http://localhost:16686` |
+
+RabbitMQ management UI is not exposed via the Gateway. Access it using `kubectl port-forward`:
+
+```bash
+# RabbitMQ management UI → http://localhost:15672  (guest / guest)
+kubectl port-forward -n internship-tracker svc/rabbitmq 15672:15672
+```
+
+Alternatively, access Jaeger directly via port-forward:
+
+```bash
+# Jaeger tracing UI → http://localhost:16686
+kubectl port-forward -n internship-tracker svc/jaeger 16686:16686
+```
+
+---
 
 ## API Examples
 
