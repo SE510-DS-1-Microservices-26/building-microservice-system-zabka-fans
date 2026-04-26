@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: it-provision-service
+  namespace: internship-tracker
+  labels:
+    app: it-provision-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: it-provision-service
+  template:
+    metadata:
+      labels:
+        app: it-provision-service
+    spec:
+      containers:
+        - name: it-provision-service
+          image: internship-tracker/it-provision-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: IT_PROVISION_CONNECTION_STRING
+            - name: RabbitMQ__Host
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: RabbitMQ__Host
+            - name: RabbitMQ__Username
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: RabbitMQ__Username
+            - name: RabbitMQ__Password
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: RabbitMQ__Password
+            - name: ASPNETCORE_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ASPNETCORE_ENVIRONMENT
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: it-provision-service
+  namespace: internship-tracker
+spec:
+  selector:
+    app: it-provision-service
+  ports:
+    - port: 8080
+      targetPort: 8080
